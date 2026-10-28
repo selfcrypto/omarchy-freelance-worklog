@@ -7,13 +7,13 @@ Budget 15 KB.
 
 | Thing | State |
 |---|---|
-| Version | 0.2.1 on `main` (not pushed); 0.2.0 public on GitHub, submitted to the Omarchy plugin marketplace |
+| Version | 0.2.1 on `main`, pushed to GitHub and installed, submitted to the Omarchy plugin marketplace |
 | Tests | 78 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 23 Model.js, 13 QML (KeyField, TimeField), all passing; `omarchy plugin validate` clean |
 | Review | Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`) |
 
 ## Pending
 
-1. Marketplace review (#13084): the reviewer found summaries and tags on the helper's command line at 0.2.0. Fixed in 0.2.1; push and reply on the issue.
+1. Marketplace review (#13084): the reviewer found summaries and tags on the helper's command line at 0.2.0. Fixed in 0.2.1 (96845a8), live-checked; the issue reply and body edit are pending. Docs commits stay local until the next release.
 2. Not yet checked live: the reminder toast, the light theme, chart clicks with a pointer.
 3. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
 
