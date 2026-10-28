@@ -448,7 +448,7 @@ var TERM_RANGES = {
 // clean_terms and parse_day). Returns { error, field }.
 function checkTerms(t) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(String(t.from || "")) || isNaN(dateFromKey(t.from).getTime()) || localDateKey(dateFromKey(t.from).getTime()) !== t.from)
-    return { error: "a date like 2026-10-21", field: "from" }
+    return { error: "a date like 2026-11-01", field: "from" }
   if (t.from < "2000-01-01" || t.from > "2100-12-31") return { error: "date out of range", field: "from" }
   if (t.billing !== "package" && t.billing !== "hourly") return { error: "billing is package or hourly", field: "billing" }
   for (var key in TERM_RANGES) {
@@ -610,6 +610,16 @@ function rowsFromSegments(segments) {
   return out
 }
 
+// How many days after its start day a row ends: the stored end while the
+// row still shows its minutes (a segment can run for days), else 1 when the
+// end is earlier than the start (past midnight), else 0.
+function rowEndDays(row) {
+  if (row.open || row.to < 0) return 0
+  if (row.endIso && minutesOfDay(row.endIso) === row.to)
+    return Math.round((dayStartMs(localDateKey(parseIso(row.endIso))) - dayStartMs(row.date)) / 86400000)
+  return row.to < row.from ? 1 : 0
+}
+
 // The stored instant when the row still shows its minutes, else the wall
 // time the row says. An end keeps its own date (a segment can run past
 // midnight or for days), so only its minutes are compared.
@@ -744,6 +754,7 @@ if (typeof module !== "undefined") {
     daySeries: daySeries,
     weekSeries: weekSeries,
     rowsFromSegments: rowsFromSegments,
+    rowEndDays: rowEndDays,
     checkRows: checkRows,
     parseTags: parseTags,
     clip: clip,

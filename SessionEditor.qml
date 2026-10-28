@@ -187,8 +187,10 @@ Item {
     property bool on: false
     property bool warn: false
     property bool clickable: false
+    // Long labels (company names) are cut; the tooltip has them whole.
+    property real maxWidth: Style.space(160)
     signal clicked()
-    implicitWidth: chipText.implicitWidth + Style.space(12)
+    implicitWidth: Math.min(chipText.implicitWidth, maxWidth) + Style.space(12)
     implicitHeight: chipText.implicitHeight + Style.space(6)
     radius: Math.min(Style.cornerRadius, height / 2)
     color: on ? Style.selectedAccentFill : "transparent"
@@ -198,11 +200,13 @@ Item {
     Text {
       id: chipText
       anchors.centerIn: parent
+      width: Math.min(implicitWidth, chip.maxWidth)
       text: chip.label
       textFormat: Text.PlainText
       color: chip.warn ? editor.urgent : (chip.on ? editor.accent : (chipMouse.containsMouse ? editor.foreground : editor.dim))
       font.family: editor.fontFamily
       font.pixelSize: Style.font.caption
+      elide: Text.ElideRight
     }
 
     MouseArea {
@@ -212,6 +216,12 @@ Item {
       hoverEnabled: true
       cursorShape: chip.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
       onClicked: chip.clicked()
+    }
+
+    PanelToolTip {
+      visible: chipMouse.containsMouse && chipText.truncated
+      text: chip.label
+      fontFamily: editor.fontFamily
     }
   }
 
@@ -337,6 +347,16 @@ Item {
           fontFamily: editor.fontFamily
         }
 
+        // The day an edited or reviewed session starts on.
+        Text {
+          visible: editor.mode !== "new" && rowModel.count > 0
+          text: { editor.revision; return rowModel.count > 0 ? Model.dayLabel(rowModel.get(0).date) : "" }
+          textFormat: Text.PlainText
+          color: editor.foreground
+          font.family: editor.fontFamily
+          font.pixelSize: Style.font.body
+        }
+
         // The day of a new entry.
         PanelActionButton {
           visible: editor.mode === "new"
@@ -392,6 +412,10 @@ Item {
               required property string endIso
               readonly property bool isLast: index === rowModel.count - 1
               readonly property bool flagged: editor.check.error !== "" && editor.check.row === index
+              // Days after its start day the segment ends (past midnight: 1).
+              readonly property int endDays: { editor.revision; return Model.rowEndDays({ date: date, from: from, to: to, open: open, endIso: endIso }) }
+              // A later row on another day than the first says which.
+              readonly property string otherDay: { editor.revision; return index > 0 && date !== rowModel.get(0).date ? Model.dayLabel(date) : "" }
               readonly property int seconds: {
                 editor.revision
                 var c = Model.checkRows([{ date: date, from: from, to: to, open: open, startIso: startIso, endIso: endIso }], editor.nowMs, true)
@@ -459,6 +483,15 @@ Item {
                   onUnhandledKey: function(event) { editor.fieldKey(toField, event) }
                 }
 
+                Text {
+                  visible: segRow.endDays > 0
+                  text: "+" + segRow.endDays + (segRow.endDays === 1 ? " day" : " days")
+                  textFormat: Text.PlainText
+                  color: editor.dim
+                  font.family: editor.fontFamily
+                  font.pixelSize: Style.font.caption
+                }
+
                 // A new entry's last segment can run on: "now".
                 Chip {
                   visible: editor.allowOpen && segRow.isLast
@@ -483,7 +516,12 @@ Item {
                   Layout.fillWidth: true
                   Layout.minimumWidth: 0
                   horizontalAlignment: Text.AlignRight
-                  text: segRow.seconds < 60 && !segRow.open ? "not counted" : Model.fmtDuration(segRow.seconds)
+                  // The hours, why the segment ended when it paused on its own
+                  // (lock, idle...), and the day of a later row on another day.
+                  // Narrow rows lose the end first: the day, then the reason.
+                  text: (segRow.seconds < 60 && !segRow.open ? "not counted" : Model.fmtDuration(segRow.seconds))
+                    + (segRow.endReason !== "" && segRow.endReason !== "edited" && segRow.endReason !== "stop" && !segRow.open ? " · " + segRow.endReason : "")
+                    + (segRow.otherDay !== "" ? " · " + segRow.otherDay : "")
                   textFormat: Text.PlainText
                   elide: Text.ElideRight
                   color: editor.dim
@@ -491,13 +529,10 @@ Item {
                   font.pixelSize: Style.font.caption
                 }
 
-                Chip {
-                  visible: segRow.endReason !== "" && segRow.endReason !== "edited" && segRow.endReason !== "stop" && !segRow.open
-                  label: segRow.endReason
-                }
-
+                // Kept in place with one row too, so the columns line up.
                 PanelActionButton {
-                  visible: rowModel.count > 1
+                  enabled: rowModel.count > 1
+                  opacity: enabled ? 1 : 0
                   iconText: "󰆴"
                   tooltipText: "Remove this segment"
                   foreground: editor.dim
@@ -541,6 +576,7 @@ Item {
       Text {
         width: parent.width
         horizontalAlignment: Text.AlignRight
+        wrapMode: Text.WordWrap
         text: editor.check.error ? "" : Model.fmtDuration(editor.check.workedSec) + " worked · "
           + Model.fmtDuration(editor.check.pausedSec) + " paused · "
           + Model.localHM(editor.check.first) + " – " + (editor.check.last ? Model.localHM(editor.check.last) : "now")

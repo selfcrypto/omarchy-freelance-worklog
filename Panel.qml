@@ -2616,7 +2616,7 @@ Panel {
             }
             Text {
               width: parent.width
-              text: "1 = calendar month; 21 = the 21st to the 20th. Changing it re-cuts every cycle of this company."
+              text: "1 = calendar month; 15 = the 15th to the 14th. Changing it re-cuts every cycle of this company."
               textFormat: Text.PlainText
               wrapMode: Text.WordWrap
               color: root.dim
@@ -2664,6 +2664,7 @@ Panel {
           Card {
             visible: root.page === "companies" && root.companiesMode === "contract"
 
+            Text { text: "Period and billing"; textFormat: Text.PlainText; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; topPadding: Style.space(4) }
             Text { text: "From (the first day these terms apply)"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
             RowLayout {
               width: parent.width
@@ -2678,7 +2679,7 @@ Panel {
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
                 maximumLength: 10
-                placeholderText: "2026-10-21"
+                placeholderText: "2026-11-01"
                 onUnhandledKey: function(event) { root.formKey(termsFromField, event) }
               }
               PanelActionButton {
@@ -2716,50 +2717,97 @@ Panel {
               font.pixelSize: Style.font.caption
             }
 
-            Text { text: "Billing"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
-            Row {
-              spacing: Style.space(6)
-              ChoiceChip { label: "Package"; on: root.termsBilling === "package"; onClicked: root.termsBilling = "package" }
-              ChoiceChip { label: "Hourly"; on: root.termsBilling === "hourly"; onClicked: root.termsBilling = "hourly" }
-            }
-
             GridLayout {
               width: parent.width
               columns: 2
               columnSpacing: Style.space(10)
               rowSpacing: Style.space(4)
 
-              Text { visible: root.termsBilling === "package"; text: "Hours a cycle"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
-              Text { visible: root.termsBilling === "package"; text: "Fee a cycle, before VAT"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+              Text { Layout.fillWidth: true; text: "Billing"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+              Text { Layout.fillWidth: true; text: "Currency"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+              Row {
+                Layout.fillWidth: true
+                spacing: Style.space(6)
+                ChoiceChip { label: "Package"; on: root.termsBilling === "package"; onClicked: root.termsBilling = "package" }
+                ChoiceChip { label: "Hourly"; on: root.termsBilling === "hourly"; onClicked: root.termsBilling = "hourly" }
+              }
               KeyField {
-                id: termsHoursField
-                radius: Style.cornerRadius
-                allowed: /[0-9.]/
-                visible: root.termsBilling === "package"
+                id: termsCurrencyField
                 Layout.fillWidth: true
                 foreground: root.foreground
                 accent: root.accent
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
-                maximumLength: 6
-                onUnhandledKey: function(event) { root.formKey(termsHoursField, event) }
+                maximumLength: 4
+                onUnhandledKey: function(event) { root.formKey(termsCurrencyField, event) }
               }
-              KeyField {
-                id: termsFeeField
-                radius: Style.cornerRadius
-                allowed: /[0-9.]/
-                visible: root.termsBilling === "package"
-                Layout.fillWidth: true
-                foreground: root.foreground
-                accent: root.accent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-                maximumLength: 10
-                onUnhandledKey: function(event) { root.formKey(termsFeeField, event) }
-              }
+            }
 
-              Text { text: "Standard rate an hour"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
-              Text { text: "VAT %"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
+            // A package: what a cycle owes and costs, and what hours over it cost.
+            Column {
+              width: parent.width
+              spacing: Style.space(6)
+              visible: root.termsBilling === "package"
+
+              Text { text: "Package"; textFormat: Text.PlainText; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; topPadding: Style.space(4) }
+              GridLayout {
+                width: parent.width
+                columns: 3
+                columnSpacing: Style.space(10)
+                rowSpacing: Style.space(4)
+
+                Text { Layout.fillWidth: true; text: "Hours a cycle"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                Text { Layout.fillWidth: true; text: "Fee, before VAT"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                Text { Layout.fillWidth: true; text: "Extra hour rate"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+                KeyField {
+                  id: termsHoursField
+                  radius: Style.cornerRadius
+                  allowed: /[0-9.]/
+                  Layout.fillWidth: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  maximumLength: 6
+                  onUnhandledKey: function(event) { root.formKey(termsHoursField, event) }
+                }
+                KeyField {
+                  id: termsFeeField
+                  radius: Style.cornerRadius
+                  allowed: /[0-9.]/
+                  Layout.fillWidth: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  maximumLength: 10
+                  onUnhandledKey: function(event) { root.formKey(termsFeeField, event) }
+                }
+                KeyField {
+                  id: termsExtraField
+                  radius: Style.cornerRadius
+                  allowed: /[0-9.]/
+                  Layout.fillWidth: true
+                  foreground: root.foreground
+                  accent: root.accent
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  maximumLength: 8
+                  onUnhandledKey: function(event) { root.formKey(termsExtraField, event) }
+                }
+              }
+            }
+
+            Text { text: "Rates and tax"; textFormat: Text.PlainText; color: root.foreground; font.family: root.fontFamily; font.pixelSize: Style.font.caption; font.bold: true; topPadding: Style.space(4) }
+            GridLayout {
+              width: parent.width
+              columns: 3
+              columnSpacing: Style.space(10)
+              rowSpacing: Style.space(4)
+
+              Text { Layout.fillWidth: true; text: "Standard rate"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+              Text { Layout.fillWidth: true; text: "VAT %"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
+              Text { Layout.fillWidth: true; text: "Weekly guide, h"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
               KeyField {
                 id: termsRateField
                 radius: Style.cornerRadius
@@ -2784,26 +2832,6 @@ Panel {
                 maximumLength: 5
                 onUnhandledKey: function(event) { root.formKey(termsVatField, event) }
               }
-
-              Text { visible: root.termsBilling === "package"; text: "Extra hour rate (over the package)"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
-              Item { visible: root.termsBilling === "package"; width: 1; height: 1 }
-              KeyField {
-                id: termsExtraField
-                radius: Style.cornerRadius
-                allowed: /[0-9.]/
-                visible: root.termsBilling === "package"
-                Layout.fillWidth: true
-                foreground: root.foreground
-                accent: root.accent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-                maximumLength: 8
-                onUnhandledKey: function(event) { root.formKey(termsExtraField, event) }
-              }
-              Item { visible: root.termsBilling === "package"; width: 1; height: 1 }
-
-              Text { text: "Weekly guide, hours (0 = none)"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
-              Text { text: "Currency"; textFormat: Text.PlainText; color: root.dim; font.family: root.fontFamily; font.pixelSize: Style.font.caption }
               KeyField {
                 id: termsGuideField
                 radius: Style.cornerRadius
@@ -2816,16 +2844,17 @@ Panel {
                 maximumLength: 4
                 onUnhandledKey: function(event) { root.formKey(termsGuideField, event) }
               }
-              KeyField {
-                id: termsCurrencyField
-                Layout.fillWidth: true
-                foreground: root.foreground
-                accent: root.accent
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-                maximumLength: 4
-                onUnhandledKey: function(event) { root.formKey(termsCurrencyField, event) }
-              }
+            }
+            Text {
+              width: parent.width
+              text: root.termsBilling === "package"
+                ? "The standard rate prices the package against your usual rate; the weekly guide is a pace hint (0 hides it)."
+                : "Hours are billed at the standard rate; the weekly guide is a pace hint (0 hides it)."
+              textFormat: Text.PlainText
+              wrapMode: Text.WordWrap
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
             }
 
             Text {

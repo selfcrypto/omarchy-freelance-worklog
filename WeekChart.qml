@@ -201,6 +201,9 @@ Item {
       delegate: Text {
         required property var modelData
         required property int index
+        // Centred on its column; a label wider than a narrow column runs into
+        // the empty neighbours (thinned labels leave every other one blank).
+        objectName: "axisLabel"
         width: chart.columnWidth
         horizontalAlignment: Text.AlignHCenter
         text: chart.thinLabels && index % 2 === 1 && index !== chart.series.length - 1 ? "" : modelData.label

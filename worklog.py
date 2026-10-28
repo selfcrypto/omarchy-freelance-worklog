@@ -18,7 +18,7 @@ weeks (Monday first) and months are local time. Durations and amounts are
 never stored.
 
 A company bills by cycle: the calendar month (cycleDay 1) or a month that
-starts on another day (cycleDay 21: the 21st to the 20th). Its terms are
+starts on another day (cycleDay 15: the 15th to the 14th). Its terms are
 contract periods that start on a date; a cycle uses the terms in force on
 each of its days, prorated by days when they change inside it.
 

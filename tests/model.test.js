@@ -364,3 +364,15 @@ test("a day row counts the live segment to the next local midnight", () => {
   // 29 March 2026 lasts 23 hours in Madrid.
   assert.strictEqual(M.dayOpenSec({ company: "c_0001" }, view, Date.parse("2026-03-30T00:00:00Z"), "2026-03-29"), 23 * 3600)
 })
+
+test("a row ends on its own day, the next, or days later", () => {
+  const rows = M.rowsFromSegments([
+    { start: "2026-10-27T08:00:00Z", end: "2026-10-27T10:00:00Z" },
+    { start: "2026-10-27T22:00:00Z", end: "2026-10-28T01:00:00Z" },   // 23:00 to 02:00 Madrid
+    { start: "2026-10-27T15:00:00Z", end: "2026-10-30T09:00:00Z" },   // three days later
+    { start: "2026-10-27T15:00:00Z", end: null }])
+  assert.deepStrictEqual(rows.map(M.rowEndDays), [0, 1, 3, 0])
+  // Typed over: only the minutes are known, an earlier end means the next day.
+  assert.strictEqual(M.rowEndDays({ date: "2026-10-27", from: 23 * 60, to: 30, endIso: "" }), 1)
+  assert.strictEqual(M.rowEndDays(Object.assign({}, rows[2], { to: 18 * 60 })), 0)  // 16:00 to 18:00
+})

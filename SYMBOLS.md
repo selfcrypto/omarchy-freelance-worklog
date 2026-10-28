@@ -51,7 +51,7 @@ A text field without an editable Qt text control. It draws plain Text and
 - property wordTail L233: leaves the caret at most one line above the bottom edge.
 - property caretBottom L234
 
-## Model.js (752 lines)
+## Model.js (763 lines)
 Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - const DAY_NAMES L6
 - const MONTH_NAMES L7
@@ -122,13 +122,14 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function cycleDaySeries L547: Mondays and the days new terms start; markers where terms start.
 - function cycleWeekSeries L567: The ISO weeks touching the cycle, hours inside the cycle only.
 - function rowsFromSegments L593: midnight, `to` -1 while open). Built from stored segments.
-- function rowInstant L616: midnight or for days), so only its minutes are compared.
-- function checkRows L625: pausedSec, first, last }.
-- function parseTags L675
-- function clip L685
-- function firstLine L690
+- function rowEndDays L616: end is earlier than the start (past midnight), else 0.
+- function rowInstant L626: midnight or for days), so only its minutes are compared.
+- function checkRows L635: pausedSec, first, last }.
+- function parseTags L685
+- function clip L695
+- function firstLine L700
 
-## Panel.qml (3022 lines)
+## Panel.qml (3051 lines)
 Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property svc L29
 - property ready L30
@@ -333,7 +334,7 @@ Worklog service: the one owner of the session state. The shell loads it
 - function idleChanged L460
 - property dataDir L483: Same lookup as the helper's data_dir().
 
-## SessionEditor.qml (609 lines)
+## SessionEditor.qml (645 lines)
 The session form: what was done, tags, the work segments and their totals,
 - property mode L22
 - property foreground L23
@@ -385,7 +386,7 @@ An HH:MM field for the session editor, on KeyField (no editable Qt text
 - signal minutesEdited L14: Minutes after midnight as typed (-1 while incomplete or invalid).
 - function format L16
 
-## WeekChart.qml (216 lines)
+## WeekChart.qml (219 lines)
 A column chart drawn with Rectangles: one bar per entry of `series`
 - property series L19
 - property target L20
@@ -409,7 +410,7 @@ A column chart drawn with Rectangles: one bar per entry of `series`
 - property thinLabels L47
 - function barColor L51
 
-## tests/model.test.js (366 lines)
+## tests/model.test.js (378 lines)
 Model.js: TZ=Europe/Madrid node --test tests
 - const NOW L7
 - function pkg L9
@@ -429,6 +430,22 @@ KeyField: typing without an editable Qt text control. Run:
 
 ## tests/qml/tst_timefield.qml (53 lines)
 TimeField keeps what is typed (review 2026-10-27). Run:
+
+## tests/render/render.qml (133 lines)
+Render check for the session form and the chart (run.sh): each case at a
+- property outDir L11
+- property palettes L12
+- property widths L15
+- property companies L16
+- property segments L19
+- property summary L23
+- property failures L24
+- property index L25
+- function spills L75: Every visible item inside the card, outside clipped parents.
+- function runCase L93
+
+## tests/render/run.sh (21 lines)
+Render check of the session form and the chart under Quickshell:
 
 ## tests/test_companies.py (611 lines)
 Companies, contract periods and billing cycles (v2):
