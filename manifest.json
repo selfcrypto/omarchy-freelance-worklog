@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.selfcrypto.worklog",
+  "name": "Freelance Worklog",
+  "version": "0.2.0",
+  "author": "Kike Ferrater",
+  "license": "MIT",
+  "description": "Paid work hours for one or more companies: start, pause and resume, an end-of-session review with a written summary, untracked time added afterwards, contract terms per company that change from any date (monthly packages with extra hours, or hourly), billing cycles that start on any day, a month view of every day and session, the package against the standard rate, and client-ready reports (Markdown, CSV, HTML) in English or Spanish.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Freelance Worklog",
+    "description": "Timer pill with a panel: the session and its company, the billing cycle against its terms, this week, the last 8 weeks, a month view of every day, history, companies and their terms, and the end-of-session review. Right-click starts or pauses, middle-click ends the session.",
+    "category": "Productivity",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "pauseOnLock": true,
+      "idlePauseMinutes": 15,
+      "reminderHours": 4,
+      "showElapsed": true,
+      "reportLanguage": "en",
+      "reportRoundingMinutes": "0",
+      "reportShowDiscount": true,
+      "reportHtml": true
+    },
+    "schema": [
+      {
+        "key": "pauseOnLock",
+        "type": "boolean",
+        "label": "Pause when the screen locks",
+        "defaultValue": true
+      },
+      {
+        "key": "idlePauseMinutes",
+        "type": "integer",
+        "label": "Pause after idle minutes (0 = off)",
+        "min": 0,
+        "max": 120,
+        "step": 1,
+        "defaultValue": 15
+      },
+      {
+        "key": "reminderHours",
+        "type": "integer",
+        "label": "Remind after hours running (0 = off)",
+        "min": 0,
+        "max": 12,
+        "step": 1,
+        "defaultValue": 4
+      },
+      {
+        "key": "showElapsed",
+        "type": "boolean",
+        "label": "Show the clock on the pill",
+        "defaultValue": true
+      },
+      {
+        "key": "reportLanguage",
+        "type": "enum",
+        "label": "Report language",
+        "options": [
+          "en",
+          "es"
+        ],
+        "defaultValue": "en"
+      },
+      {
+        "key": "reportRoundingMinutes",
+        "type": "enum",
+        "label": "Round sessions in reports (minutes)",
+        "options": [
+          "0",
+          "15"
+        ],
+        "defaultValue": "0"
+      },
+      {
+        "key": "reportShowDiscount",
+        "type": "boolean",
+        "label": "Monthly report shows the standard-rate value and the discount",
+        "defaultValue": true
+      },
+      {
+        "key": "reportHtml",
+        "type": "boolean",
+        "label": "Reports also as an HTML page (prints to PDF from a browser)",
+        "defaultValue": true
+      }
+    ]
+  }
+}
