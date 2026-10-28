@@ -376,3 +376,13 @@ test("a row ends on its own day, the next, or days later", () => {
   assert.strictEqual(M.rowEndDays({ date: "2026-10-27", from: 23 * 60, to: 30, endIso: "" }), 1)
   assert.strictEqual(M.rowEndDays(Object.assign({}, rows[2], { to: 18 * 60 })), 0)  // 16:00 to 18:00
 })
+
+test("the cycle and the week lines say which they are about", () => {
+  assert.strictEqual(M.cycleLeftLine({ remainingSec: 38 * 3600 + 9 * 60, daysLeft: 24 }), "38h 09m left in 24 days")
+  assert.strictEqual(M.cycleLeftLine({ remainingSec: 3600, daysLeft: 1 }), "1h left in 1 day")
+  assert.strictEqual(M.cycleLeftLine({ remainingSec: 0, daysLeft: 3 }), "package done")
+  assert.strictEqual(M.weekGuideLine({ workedSec: 7 * 3600 + 50 * 60, targetSec: 10 * 3600, remainingSec: 2 * 3600 + 10 * 60, done: false }),
+    "Week guide: 7h 50m of 10h, 2h 10m to go")
+  assert.strictEqual(M.weekGuideLine({ workedSec: 11 * 3600, targetSec: 10 * 3600, remainingSec: 0, done: true }), "Week guide: 11h of 10h, done")
+  assert.strictEqual(M.weekGuideLine({ workedSec: 3600, targetSec: 0 }), "This week 1h")
+})

@@ -158,3 +158,7 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 ## 2026-10-28 · 0.3.1 replaces 0.3.0 in #13095
 **Decision.** 0.3.0 was never approved, so #13095 was retitled to 0.3.1 and pointed at its commit instead of publishing 0.3.0 first. Tag `v0.3.0` stays where it was.
 **Why.** Kike chose it, as for Power Saving 1.6.0 replacing 1.5.0.
+
+## 2026-10-28 · Cycle and week lines name their scope
+**Decision.** Under the cycle meter the line reads "behind 2h 32m · 38h 09m left in 24 days" (`cycleLeftLine`); the week line reads "Week guide: 9h 50m of 12h, 2h 10m to go" (`weekGuideLine`), without a per-day figure.
+**Why.** Kike: "This week … · 25m a day" sat under the cycle meter and read as what the cycle needed a day, which was four times more. Weeks are a guide; only the cycle total is owed.

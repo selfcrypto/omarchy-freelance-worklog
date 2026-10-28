@@ -10,7 +10,7 @@
 | Billing cycles (anchor day, keys, labels) | `worklog.py` (`cycle_bounds`, `cycle_of`, `cycle_label`) | `Model.js` (`cycleBounds`, `cycleOf`, `cycleLabel`) must agree, both tested |
 | Companies, contract periods, extra hours | `worklog.py` (`cmd_company`, `cmd_contract`, `cmd_overage`, `clean_terms`, `terms_on`) | `Model.js` (`checkTerms`), `Panel.qml` companies page, `tests/test_companies.py` |
 | The month page | `worklog.py` (`cmd_month`), `Panel.qml` (`openMonth`, `loadMonth`, `monthRows`, month column) | `Model.js` (`cycleDaySeries`, `cycleWeekSeries`, `sessionTip`) |
-| A line of text in the panel | `Panel.qml`, formatting in `Model.js` (`weekLine`, `paceLine`, `moneySummary`, `fmt*`) | `tests/model.test.js` |
+| A line of text in the panel | `Panel.qml`, formatting in `Model.js` (`weekLine`, `paceLine`, `cycleLeftLine`, `weekGuideLine`, `moneySummary`, `fmt*`) | `tests/model.test.js` |
 | A chart | `WeekChart.qml` (`markers`, `thinning`); series in `Model.js` (`daySeries`, `weekSeries`, `cycleDaySeries`, `cycleWeekSeries`) | |
 | The review or add/edit form | `SessionEditor.qml`, `TimeField.qml`; checks in `Model.js` (`checkRows`, `rowsFromSegments`) | `worklog.py` (`clean_segments`) must agree |
 | A panel page or key | `Panel.qml` (`go`, `keyCatcher` `Keys.onPressed`, page columns) | `footerKeys` (the fixed footer), `hero` |

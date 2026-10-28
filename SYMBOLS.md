@@ -51,7 +51,7 @@ A text field without an editable Qt text control. It draws plain Text and
 - property wordTail L233: leaves the caret at most one line above the bottom edge.
 - property caretBottom L234
 
-## Model.js (763 lines)
+## Model.js (780 lines)
 Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - const DAY_NAMES L6
 - const MONTH_NAMES L7
@@ -90,46 +90,48 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function monthLive L281
 - function openSecByPart L288: from local midnight of its first day to local midnight after its last.
 - function weekLine L295: "9h 40m of 12h · 2h 20m left · 3 days left · 47m a day"; no guide: hours only.
-- function paceLine L303
-- function uniformHourly L311: says it all); otherwise each part gets its own line.
-- function monthLine L319: The package line of a cycle: running, finished short or over, hourly, none.
-- function moneySummary L335: { label, amount }; the month page shows the whole breakdown.
-- function daysInMonth L348
-- function shiftMonth L350
-- function monthKey L355
-- function cycleFirst L357
-- function cycleBounds L360: { first, last } date keys of the cycle that starts in month `key`.
-- function cycleOf L369: Key of the cycle holding the date key.
-- function shiftCycle L378
-- function cycleLabel L385: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
-- function dayMonth L396: "21 Oct" / "21 Oct 2026".
-- function ordinal L401
-- function cycleName L406
-- function companyOf L410
-- function companyName L416
-- function activeCompanies L421
-- function nextInList L429: The element after (or before) `current` in `list`, wrapping.
-- function termsLine L436: "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
-- const TERM_RANGES L442
-- function checkTerms L449: clean_terms and parse_day). Returns { error, field }.
-- function sessionTip L469: Hover text of a session row on the month page.
-- function niceHours L485: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
-- function barHeight L491
-- function daySeries L497: The 7 bars of the week chart, the open segment added to today.
-- function weekSeries L515: The 8 bars of the trend, this week (live) last.
-- function monthOpenSecBetween L533: The live segment's seconds that count on the month page (its company, or all).
-- function dayOpenSec L541: midnight (a DST day lasts 23 or 25 hours).
-- function cycleDaySeries L547: Mondays and the days new terms start; markers where terms start.
-- function cycleWeekSeries L567: The ISO weeks touching the cycle, hours inside the cycle only.
-- function rowsFromSegments L593: midnight, `to` -1 while open). Built from stored segments.
-- function rowEndDays L616: end is earlier than the start (past midnight), else 0.
-- function rowInstant L626: midnight or for days), so only its minutes are compared.
-- function checkRows L635: pausedSec, first, last }.
-- function parseTags L685
-- function clip L695
-- function firstLine L700
+- function cycleLeftLine L305: in how many days, as one phrase so it cannot be read as the week's.
+- function weekGuideLine L312: only the cycle total is owed. No guide: the week's hours.
+- function paceLine L318
+- function uniformHourly L326: says it all); otherwise each part gets its own line.
+- function monthLine L334: The package line of a cycle: running, finished short or over, hourly, none.
+- function moneySummary L350: { label, amount }; the month page shows the whole breakdown.
+- function daysInMonth L363
+- function shiftMonth L365
+- function monthKey L370
+- function cycleFirst L372
+- function cycleBounds L375: { first, last } date keys of the cycle that starts in month `key`.
+- function cycleOf L384: Key of the cycle holding the date key.
+- function shiftCycle L393
+- function cycleLabel L400: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
+- function dayMonth L411: "21 Oct" / "21 Oct 2026".
+- function ordinal L416
+- function cycleName L421
+- function companyOf L425
+- function companyName L431
+- function activeCompanies L436
+- function nextInList L444: The element after (or before) `current` in `list`, wrapping.
+- function termsLine L451: "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
+- const TERM_RANGES L457
+- function checkTerms L464: clean_terms and parse_day). Returns { error, field }.
+- function sessionTip L484: Hover text of a session row on the month page.
+- function niceHours L500: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
+- function barHeight L506
+- function daySeries L512: The 7 bars of the week chart, the open segment added to today.
+- function weekSeries L530: The 8 bars of the trend, this week (live) last.
+- function monthOpenSecBetween L548: The live segment's seconds that count on the month page (its company, or all).
+- function dayOpenSec L556: midnight (a DST day lasts 23 or 25 hours).
+- function cycleDaySeries L562: Mondays and the days new terms start; markers where terms start.
+- function cycleWeekSeries L582: The ISO weeks touching the cycle, hours inside the cycle only.
+- function rowsFromSegments L608: midnight, `to` -1 while open). Built from stored segments.
+- function rowEndDays L631: end is earlier than the start (past midnight), else 0.
+- function rowInstant L641: midnight or for days), so only its minutes are compared.
+- function checkRows L650: pausedSec, first, last }.
+- function parseTags L700
+- function clip L710
+- function firstLine L715
 
-## Panel.qml (3051 lines)
+## Panel.qml (3044 lines)
 Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property svc L29
 - property ready L30
@@ -410,7 +412,7 @@ A column chart drawn with Rectangles: one bar per entry of `series`
 - property thinLabels L47
 - function barColor L51
 
-## tests/model.test.js (378 lines)
+## tests/model.test.js (388 lines)
 Model.js: TZ=Europe/Madrid node --test tests
 - const NOW L7
 - function pkg L9

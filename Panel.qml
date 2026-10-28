@@ -1713,8 +1713,7 @@ Panel {
 
                 Text {
                   Layout.fillWidth: true
-                  text: root.month ? (root.month.remainingSec > 0 ? "· " + Model.fmtDuration(root.month.remainingSec) + " left · "
-                    + root.month.daysLeft + (root.month.daysLeft === 1 ? " day" : " days") : "· package done") : ""
+                  text: root.month ? "· " + Model.cycleLeftLine(root.month) : ""
                   textFormat: Text.PlainText
                   color: root.dim
                   font.family: root.fontFamily
@@ -1737,13 +1736,7 @@ Panel {
               Text {
                 width: parent.width
                 visible: root.week !== null
-                text: {
-                  var w = root.week
-                  if (!w) return ""
-                  if (!(w.targetSec > 0)) return "This week " + Model.fmtDuration(w.workedSec)
-                  return "This week " + Model.fmtDuration(w.workedSec) + " of " + Model.fmtDuration(w.targetSec)
-                    + (w.done ? " · done" : " · " + Model.fmtDuration(w.perDaySec) + " a day")
-                }
+                text: root.week ? Model.weekGuideLine(root.week) : ""
                 textFormat: Text.PlainText
                 color: root.dim
                 font.family: root.fontFamily

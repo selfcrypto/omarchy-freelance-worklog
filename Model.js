@@ -300,6 +300,21 @@ function weekLine(live) {
   return head + " · " + fmtDuration(live.remainingSec) + " left · " + days + " · " + fmtDuration(live.perDaySec) + " a day"
 }
 
+// The track page's cycle line after the pace: what the cycle still owes and
+// in how many days, as one phrase so it cannot be read as the week's.
+function cycleLeftLine(live) {
+  if (!(live.remainingSec > 0)) return "package done"
+  return fmtDuration(live.remainingSec) + " left in " + live.daysLeft + (live.daysLeft === 1 ? " day" : " days")
+}
+
+// The track page's week line, named as the guide it is: weeks are flexible,
+// only the cycle total is owed. No guide: the week's hours.
+function weekGuideLine(live) {
+  if (!(live.targetSec > 0)) return "This week " + fmtDuration(live.workedSec)
+  var head = "Week guide: " + fmtDuration(live.workedSec) + " of " + fmtDuration(live.targetSec)
+  return head + (live.done ? ", done" : ", " + fmtDuration(live.remainingSec) + " to go")
+}
+
 function paceLine(live) {
   var b = live.balanceSec
   if (Math.abs(b) < 15 * 60) return "on pace"
@@ -729,6 +744,8 @@ if (typeof module !== "undefined") {
     money: money,
     weekLine: weekLine,
     paceLine: paceLine,
+    cycleLeftLine: cycleLeftLine,
+    weekGuideLine: weekGuideLine,
     monthLine: monthLine,
     moneySummary: moneySummary,
     uniformHourly: uniformHourly,

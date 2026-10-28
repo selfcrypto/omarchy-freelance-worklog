@@ -8,7 +8,7 @@ Budget 15 KB.
 | Thing | State |
 |---|---|
 | Version | 0.3.1 on `main`, tag v0.3.1, `[Verify]` #13095 retargeted to it (0.3.0 was never approved); 0.2.1 published and installed |
-| Tests | 82 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 28 Model.js, 16 QML (KeyField, TimeField), paste cap (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
+| Tests | 82 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 29 Model.js, 16 QML (KeyField, TimeField), paste cap (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
 | Review | Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
