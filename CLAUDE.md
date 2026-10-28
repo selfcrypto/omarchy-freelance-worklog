@@ -34,7 +34,8 @@ present: `.private/` (git-ignored, never published).
 
 ## Rules that apply everywhere
 
-- `worklog.py` is the only writer of the data files; QML calls it with fixed argv under `timeout`, one call at a time.
+- `worklog.py` is the only writer of the data files; QML calls it under `timeout`, one call at a time, with the arguments as JSON on stdin (`--stdin`), never on argv.
+- No data-file text on any command line, notifications included: toasts carry counts and times, refusals name no company or tag.
 - Timestamps are stored UTC; days, weeks (Monday first) and months are local. Durations and amounts are never stored.
 - Terms belong to the data (companies, contract periods from a date), never to the widget settings; a cycle uses the terms of each of its days, prorated. Past cycles never change when new terms are added.
 - One currency per cycle; money is rounded half up to the cent, the same in `worklog.py` (`cents`) and `Model.js` (`round2`).

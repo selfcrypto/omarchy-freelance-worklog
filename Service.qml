@@ -9,8 +9,10 @@ import "Model.js" as Model
 // functions below, so the copies on each monitor never disagree.
 //
 // All data lives in files written only by worklog.py (fixed argv, one call at
-// a time, each under `timeout`). Every call returns the full view, assigned
-// to `view` in one go; the running clock is derived here from the open
+// a time, each under `timeout`). The arguments go to the helper as JSON on
+// stdin, never on its command line: other local users can read the process
+// list, and the arguments carry summaries, tags, company names and terms.
+// Every call returns the full view, assigned to `view` in one go; the running clock is derived here from the open
 // segment's start, so nothing is written per second. A heartbeat every 20 s
 // while running lets the next start tell a shell restart (keep running) from
 // a shutdown or crash (pause at the last heartbeat).
@@ -147,7 +149,8 @@ Item {
     if (pending || queue.length === 0) return
     pending = queue[0]
     queue = queue.slice(1)
-    helperProc.command = ["timeout", "-k", "3", "15", "python3", "-I", helper].concat(pending.args).concat(["--config", configJson])
+    helperProc.payload = JSON.stringify(pending.args.concat(["--config", configJson]))
+    helperProc.stdinEnabled = true
     helperProc.running = true
   }
 
@@ -166,8 +169,7 @@ Item {
       refused(lastError, lastErrorField)
     }
     if (result.ok && result.view && result.view.migrated)
-      notify("Worklog: data upgraded", "Your sessions now belong to " + Model.companyName(result.view, result.view.migrated.company)
-        + ". Set the company's name, billing cycle and terms in the panel (C).")
+      notify("Worklog: data upgraded", "Your sessions now belong to one company. Set its name, billing cycle and terms in the panel (C).")
     if (result.ok && result.view && result.view.recovered)
       notify("Worklog data recovered", "An unreadable " + result.view.recovered.file + " was moved aside as " + result.view.recovered.movedTo)
     try {
@@ -179,6 +181,14 @@ Item {
 
   Process {
     id: helperProc
+    property string payload: ""
+    command: ["timeout", "-k", "3", "15", "python3", "-I", root.helper, "--stdin"]
+    // Closing stdin (stdinEnabled false) is the helper's end of input.
+    onStarted: {
+      write(payload)
+      payload = ""
+      stdinEnabled = false
+    }
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: root.handle(text)
@@ -334,9 +344,11 @@ Item {
     var args = ["export", "--" + kind, key || "this", "--out", exportDir].concat(company ? ["--company", String(company)] : [])
     run(args, function(r) {
       if (r.ok) {
+        // Counts only: notification text is passed on a command line.
         var files = r.export.reports ? r.export.reports : [r.export]
-        var names = files.map(function(f) { return f.markdown.replace(root.home, "~") })
-        root.notify("Worklog exported", r.export.sessions + " sessions → " + (names.length ? names.join(", ") : "nothing to export"))
+        root.notify("Worklog exported", files.length
+          ? r.export.sessions + " sessions, " + files.length + (files.length === 1 ? " report in " : " reports in ") + exportDir.replace(root.home, "~")
+          : "Nothing to export")
       } else root.notify("Worklog export failed", r.error)
       if (done) done(r)
     })

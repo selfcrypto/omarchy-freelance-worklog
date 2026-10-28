@@ -53,7 +53,7 @@
 `view`, `start`, `pause`, `resume`, `unpause`, `stop`, `back`, `draft`, `edit-active`, `confirm`,
 `discard`, `heartbeat`, `recover`, `announce`, `add`, `update`, `delete`, `company`, `contract`,
 `overage`, `sessions`, `month`, `export`. Every call takes `--config <json>` (report settings and the
-v1 terms under `legacy`); test hooks `WORKLOG_DATA_DIR`, `WORKLOG_NOW`, `WORKLOG_TZ`.
+v1 terms under `legacy`). The shell sends the whole list as JSON on stdin (`worklog.py --stdin`, `stdin_argv`); test hooks `WORKLOG_DATA_DIR`, `WORKLOG_NOW`, `WORKLOG_TZ`.
 
 ## Tests
 

@@ -109,3 +109,8 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 ## 2026-10-28 · Neutral default terms
 **Decision.** A fresh install's company starts at 40 h, 2.000 a cycle, 50 an hour (extra hours too), VAT 21 %, a 10 h weekly guide. v1 settings still seed the first company; an extra hour rate not given follows the standard rate.
 **Why.** The previous defaults were the maintainer's real contract; the repo is public.
+
+## 2026-10-28 · Helper arguments on stdin
+**Decision.** The shell runs `timeout -k 3 15 python3 -I worklog.py --stdin` and writes the argument list as one JSON array of strings on stdin (`onStarted`: `write`, then `stdinEnabled = false` for EOF; capped at 1 MiB in `stdin_argv`). The argv form stays for the CLI and tests of it. Refusal texts name no company or tag, and the export toast gives counts and the folder, because `omarchy-notification-send` takes its text on argv.
+**Why.** Marketplace review of 0.2.0 (#13084): `/proc/*/cmdline` is readable by other local users, and the arguments carried summaries, tags, company names and terms.
+**Alternative rejected.** Moving only `--summary` and `--tags` off argv: company names and contract terms would still show; a temp file per call: more files to create, protect and clean up than a pipe.

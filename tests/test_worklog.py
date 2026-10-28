@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 FIXTURE_TERMS = {"weeklyTargetHours": 12, "monthlyHours": 48, "monthlyFee": 1800, "standardRate": 60}
@@ -26,13 +27,14 @@ class Helper(unittest.TestCase):
 
     def run_cmd(self, *args, now=None, ok=True, config=None):
         env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=now or self.now, WORKLOG_TZ="Europe/Madrid")
-        argv = [sys.executable, "-I", HELPER] + list(args)
+        argv = list(args)
         # Fixtures assume a 48 h / 1.800 / 60 €/h package: seeded as v1 settings.
         config = dict(config or {})
         if "legacy" not in config and not any(k in config for k in FIXTURE_TERMS):
             config["legacy"] = FIXTURE_TERMS
         argv += ["--config", json.dumps(config)]
-        p = subprocess.run(argv, env=env, capture_output=True, text=True)
+        # The way the shell calls it: the arguments as JSON on stdin.
+        p = subprocess.run([sys.executable, "-I", HELPER, "--stdin"], input=json.dumps(argv), env=env, capture_output=True, text=True)
         result = json.loads(p.stdout)
         self.assertEqual(result["ok"], ok, result)
         self.assertEqual(p.returncode, 0 if ok else 1)
@@ -505,6 +507,51 @@ class Helper(unittest.TestCase):
             self.assertEqual([n for n in os.listdir(bdir) if n.startswith(".tmp-")], [])
         finally:
             del os.environ["WORKLOG_DATA_DIR"], os.environ["WORKLOG_NOW"]
+
+    # ------------------------------------------------------------ arguments
+
+    def helper(self, argv):
+        env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=self.now, WORKLOG_TZ="Europe/Madrid")
+        return subprocess.Popen([sys.executable, "-I", HELPER] + argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, env=env, text=True)
+
+    def test_stdin_arguments_stay_off_the_command_line(self):
+        self.run_cmd("start", now="2026-10-27T08:00:00Z")
+        p = self.helper(["--stdin"])
+        try:
+            # The helper waits on stdin; the command line shows once exec is done.
+            cmdline = [b""]
+            for _ in range(200):
+                with open("/proc/%d/cmdline" % p.pid, "rb") as f:
+                    cmdline = f.read().rstrip(b"\0").split(b"\0")
+                if cmdline[-1] == b"--stdin":
+                    break
+                time.sleep(0.01)
+            out, _ = p.communicate(json.dumps(["draft", "--summary", "private summary", "--tags", "secret-tag"]))
+        finally:
+            p.kill()
+        self.assertEqual(cmdline[-2:], [HELPER.encode(), b"--stdin"])
+        self.assertTrue(json.loads(out)["ok"])
+        self.assertEqual(self.active()["draft"], {"summary": "private summary", "tags": ["secret-tag"]})
+
+    def test_bad_stdin_arguments_are_refused(self):
+        for stdin in ["", "not json", '{"cmd": "view"}', '["view", 1]', "[]", '["--stdin"]', "[" + '"x",' * (1 << 19) + '"x"]']:
+            p = self.helper(["--stdin"])
+            out, _ = p.communicate(stdin)
+            r = json.loads(out)
+            self.assertFalse(r["ok"], stdin[:40])
+            self.assertEqual((r["field"], p.returncode), ("cmd", 1), stdin[:40])
+
+    def test_command_line_arguments_still_work(self):
+        p = self.helper(["view"])
+        out, _ = p.communicate("")
+        self.assertTrue(json.loads(out)["ok"])
+
+    def test_refusals_never_echo_a_tag(self):
+        segs = [{"start": "2026-10-27T08:00:00Z", "end": "2026-10-27T09:00:00Z"}]
+        r = self.run_cmd("add", "--segments", json.dumps(segs), "--summary", "x", "--tags", "t" * 60 + "private", ok=False)
+        self.assertEqual(r["field"], "tags")
+        self.assertNotIn("private", r["error"])
+        self.assertNotIn("tttt", r["error"])
 
 
 if __name__ == "__main__":

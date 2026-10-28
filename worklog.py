@@ -688,13 +688,13 @@ def resolve_company(store, ref, allow_archived=False):
     for c in companies:
         if c["id"] == ref:
             if c.get("archived") and not allow_archived:
-                raise Refusal(c["name"] + " is archived", "company")
+                raise Refusal("the company is archived", "company")
             return c
     for key in ("name", "tag"):
         for c in companies:
             if not c.get("archived") and c[key].lower() == ref.lower():
                 return c
-    raise Refusal("no such company: " + ref[:40], "company")
+    raise Refusal("no such company", "company")
 
 
 def current_company(store):
@@ -861,7 +861,7 @@ def clean_tags(raw):
         if not t:
             continue
         if len(t) > MAX_TAG:
-            raise Refusal("tag longer than %d characters: %s" % (MAX_TAG, t[:MAX_TAG]), "tags")
+            raise Refusal("a tag is longer than %d characters" % MAX_TAG, "tags")
         if t not in tags:
             tags.append(t)
     if len(tags) > MAX_TAGS:
@@ -1170,7 +1170,7 @@ def cmd_start(store, args, now):
     need_state(store, "idle")
     company = resolve_company(store, args.company) if args.company else current_company(store)
     if company.get("archived"):
-        raise Refusal(company["name"] + " is archived", "company")
+        raise Refusal("the company is archived", "company")
     if args.segments:
         segments = clean_segments(args.segments, now, allow_open=True, drop_short=False)
         if segments[-1]["end"] is not None:
@@ -1270,7 +1270,7 @@ def cmd_edit_active(store, args, now):
     if args.company:
         company = resolve_company(store, args.company, allow_archived=True)
         if company.get("archived") and company["id"] != store.active["session"].get("company"):
-            raise Refusal(company["name"] + " is archived", "company")
+            raise Refusal("the company is archived", "company")
         store.active["session"]["company"] = company["id"]
         if not company.get("archived"):
             store.log["currentCompany"] = company["id"]
@@ -1289,7 +1289,7 @@ def session_company(store, args, default):
         return default
     company = resolve_company(store, args.company, allow_archived=True)
     if company.get("archived") and company["id"] != default:
-        raise Refusal(company["name"] + " is archived", "company")
+        raise Refusal("the company is archived", "company")
     return company["id"]
 
 
@@ -1405,7 +1405,7 @@ def cmd_delete(store, args, now):
 def check_name_free(store, name, skip_id=None):
     for c in store.log["companies"]:
         if c["id"] != skip_id and c["name"].lower() == name.lower():
-            raise Refusal("a company is already called " + c["name"], "name")
+            raise Refusal("another company has this name", "name")
 
 
 def cmd_company(store, args, now):
@@ -1437,16 +1437,16 @@ def cmd_company(store, args, now):
             check_currency_cuts(company)
     elif action == "use":
         if company.get("archived"):
-            raise Refusal(company["name"] + " is archived", "company")
+            raise Refusal("the company is archived", "company")
         store.log["currentCompany"] = company["id"]
         return
     elif action in ("archive", "delete"):
         if store.active and store.active["session"].get("company") == company["id"]:
-            raise Refusal("the live session belongs to " + company["name"], "company")
+            raise Refusal("the live session belongs to this company", "company")
         if action == "delete":
             used = sum(1 for s in store.log["sessions"] if s.get("company") == company["id"])
             if used:
-                raise Refusal("%s has %d sessions. Archive it instead." % (company["name"], used), "company")
+                raise Refusal("the company has %d sessions. Archive it instead." % used, "company")
             if len(store.log["companies"]) == 1:
                 raise Refusal("the last company cannot be deleted", "company")
         if store.log["currentCompany"] == company["id"] or not company.get("archived"):
@@ -2195,10 +2195,30 @@ def run(argv):
         store.close()
 
 
+MAX_STDIN = 1 << 20
+
+
+def stdin_argv():
+    """`worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
+    The shell calls the helper this way so summaries, tags, company names and
+    terms stay out of the process list, which other local users can read."""
+    raw = sys.stdin.buffer.read(MAX_STDIN + 1)
+    if len(raw) > MAX_STDIN:
+        raise Refusal("arguments longer than %d bytes" % MAX_STDIN, "cmd")
+    try:
+        argv = json.loads(raw.decode("utf-8"))
+    except ValueError:
+        raise Refusal("arguments are not JSON", "cmd")
+    if not isinstance(argv, list) or not argv or not all(isinstance(a, str) for a in argv) or argv[0] == "--stdin":
+        raise Refusal("arguments are not a list of strings", "cmd")
+    return argv
+
+
 def main(argv=None):
     os.umask(0o077)
     try:
-        result = run(sys.argv[1:] if argv is None else argv)
+        argv = sys.argv[1:] if argv is None else argv
+        result = run(stdin_argv() if argv == ["--stdin"] else argv)
         code = 0
     except Refusal as e:
         result = {"ok": False, "error": e.error, "field": e.field}

@@ -42,13 +42,14 @@ class Companies(unittest.TestCase):
 
     def run_cmd(self, *args, now=NOW, ok=True, config=None):
         env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=now, WORKLOG_TZ="Europe/Madrid")
-        argv = [sys.executable, "-I", HELPER] + list(args)
+        argv = list(args)
         # Fixtures assume a 48 h / 1.800 / 60 €/h package: seeded as v1 settings.
         config = dict(config or {})
         if "legacy" not in config and not any(k in config for k in FIXTURE_TERMS):
             config["legacy"] = FIXTURE_TERMS
         argv += ["--config", json.dumps(config)]
-        p = subprocess.run(argv, env=env, capture_output=True, text=True)
+        # The way the shell calls it: the arguments as JSON on stdin.
+        p = subprocess.run([sys.executable, "-I", HELPER, "--stdin"], input=json.dumps(argv), env=env, capture_output=True, text=True)
         result = json.loads(p.stdout)
         self.assertEqual(result["ok"], ok, result)
         return result

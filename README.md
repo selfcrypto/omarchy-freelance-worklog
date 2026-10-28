@@ -66,7 +66,7 @@ Removing the plugin keeps your data and reports. Delete `~/.local/share/omarchy-
 
 ## What it runs
 
-`python3 -I worklog.py` (the data helper, fixed arguments, under `timeout`), `omarchy-hyprland-session-locked` (lock detection), `omarchy-notification-send` (toasts), `omarchy-shell shell summon` (opens its own panel), and `wl-paste` only on Ctrl+V. No network access, no sudo, no other files written than the data folder and the reports.
+`python3 -I worklog.py --stdin` (the data helper, under `timeout`; its arguments go as JSON on stdin, so summaries, tags and terms never show in the process list), `omarchy-hyprland-session-locked` (lock detection), `omarchy-notification-send` (toasts), `omarchy-shell shell summon` (opens its own panel), and `wl-paste` only on Ctrl+V. No network access, no sudo, no other files written than the data folder and the reports.
 
 ## License
 

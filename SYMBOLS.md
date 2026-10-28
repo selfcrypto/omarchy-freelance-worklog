@@ -226,97 +226,97 @@ Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property pillLabel L1195
 - property liveCompanyName L1204
 
-## Service.qml (590 lines)
+## Service.qml (602 lines)
 Worklog service: the one owner of the session state. The shell loads it
-- property shell L30: Injected by omarchy-shell (the service loader).
-- property pluginId L32
-- property home L33
-- property shellConfigPath L34
-- property helper L35
-- property fileConfig L39
-- property entrySettings L40
-- function setting L52
-- function numberSetting L56
-- function boolSetting L60
-- property legacy L67: keys, when still in shell.json, only seed the first company.
-- property currency L76
-- property pauseOnLock L77
-- property idlePauseMinutes L78
-- property reminderHours L79
-- property showElapsed L80
-- property exportDir L81
-- property reportLanguage L82
-- property reportRoundingMinutes L83
-- property reportShowDiscount L84
-- property reportHtml L85
-- property configJson L87
-- property view L96
-- property ready L97
-- property sessionState L98
-- property pauseReason L99
-- property announced L100
-- property nowMs L101
-- property lastTickMs L102
-- property bootId L103
-- property lastError L104
-- property lastErrorField L105
-- property locked L106
-- property prompt L108: Set when the user is back from an automatic pause: { reason, awaySec, since }.
-- property lastReminderMs L109
-- property lastReviewToastMs L110
-- property sessionSec L112
-- property pauseSec L113
-- property todaySec L114
-- property week L115
-- property month L116
-- property currentCompany L119: Companies: the one the track page shows and the next start uses.
-- property currentCompanyInfo L120
-- property activeCompanies L121
-- property severalCompanies L122
-- property liveCompanyInfo L123
-- property requestedPage L126: The page a summoned panel opens on (read once by the panel on open).
-- function openRequested L129: Opens the panel on the focused monitor through the shell's own summon.
-- signal refused L134: A helper error the panel shows next to the field it names.
-- property queue L138
-- property pending L139
-- function run L141
-- function pump L146
-- function handle L154
-- function refresh L188
-- function notify L190
-- function isoAt L194
-- function start L198
-- function startWithSegments L207: Manual entry that runs on: earlier segments plus an open last one.
-- function startFor L212: Start for a company named by id, name or tag; it becomes current.
-- function useCompany L219: The current company; with a live session, the session moves to it too.
-- function company L226: use, archive, unarchive, delete (id).
-- function contract L236: action: set (id, from, terms, replace), delete (id, from).
-- function overage L244: Hours over the package in one cycle: action "waive" or "bill".
-- function monthData L247: The month page: key YYYY-MM or "this", company id or "all".
-- function pause L249
-- function resume L257
-- function unpause L266: The away time counts as work: the paused segment runs on.
-- function keepPaused L273
-- function toggle L278
-- function stop L286
-- function back L294
-- function saveDraft L296
-- function confirm L302: null summary or tags: the helper uses the saved draft (IPC confirm).
-- function discard L311
-- function addSession L316
-- function updateSession L321
-- function deleteSession L326
-- function sessions L329: kind "week" with a key YYYY-Www or "this".
-- function exportPeriod L333: "all", or empty for the default (week: all, month: the current company).
-- function announce L345
-- property autoPaused L349
-- function checkReturn L353: Back at the machine after an automatic pause: ask, once.
-- function remind L380
-- property idleMonitor L423: one is created for each setting value and the old one destroyed.
-- property idleMonitorTimeout L424
-- function armIdle L435
-- function idleChanged L448
-- property dataDir L471: Same lookup as the helper's data_dir().
+- property shell L32: Injected by omarchy-shell (the service loader).
+- property pluginId L34
+- property home L35
+- property shellConfigPath L36
+- property helper L37
+- property fileConfig L41
+- property entrySettings L42
+- function setting L54
+- function numberSetting L58
+- function boolSetting L62
+- property legacy L69: keys, when still in shell.json, only seed the first company.
+- property currency L78
+- property pauseOnLock L79
+- property idlePauseMinutes L80
+- property reminderHours L81
+- property showElapsed L82
+- property exportDir L83
+- property reportLanguage L84
+- property reportRoundingMinutes L85
+- property reportShowDiscount L86
+- property reportHtml L87
+- property configJson L89
+- property view L98
+- property ready L99
+- property sessionState L100
+- property pauseReason L101
+- property announced L102
+- property nowMs L103
+- property lastTickMs L104
+- property bootId L105
+- property lastError L106
+- property lastErrorField L107
+- property locked L108
+- property prompt L110: Set when the user is back from an automatic pause: { reason, awaySec, since }.
+- property lastReminderMs L111
+- property lastReviewToastMs L112
+- property sessionSec L114
+- property pauseSec L115
+- property todaySec L116
+- property week L117
+- property month L118
+- property currentCompany L121: Companies: the one the track page shows and the next start uses.
+- property currentCompanyInfo L122
+- property activeCompanies L123
+- property severalCompanies L124
+- property liveCompanyInfo L125
+- property requestedPage L128: The page a summoned panel opens on (read once by the panel on open).
+- function openRequested L131: Opens the panel on the focused monitor through the shell's own summon.
+- signal refused L136: A helper error the panel shows next to the field it names.
+- property queue L140
+- property pending L141
+- function run L143
+- function pump L148
+- function handle L157
+- function refresh L198
+- function notify L200
+- function isoAt L204
+- function start L208
+- function startWithSegments L217: Manual entry that runs on: earlier segments plus an open last one.
+- function startFor L222: Start for a company named by id, name or tag; it becomes current.
+- function useCompany L229: The current company; with a live session, the session moves to it too.
+- function company L236: use, archive, unarchive, delete (id).
+- function contract L246: action: set (id, from, terms, replace), delete (id, from).
+- function overage L254: Hours over the package in one cycle: action "waive" or "bill".
+- function monthData L257: The month page: key YYYY-MM or "this", company id or "all".
+- function pause L259
+- function resume L267
+- function unpause L276: The away time counts as work: the paused segment runs on.
+- function keepPaused L283
+- function toggle L288
+- function stop L296
+- function back L304
+- function saveDraft L306
+- function confirm L312: null summary or tags: the helper uses the saved draft (IPC confirm).
+- function discard L321
+- function addSession L326
+- function updateSession L331
+- function deleteSession L336
+- function sessions L339: kind "week" with a key YYYY-Www or "this".
+- function exportPeriod L343: "all", or empty for the default (week: all, month: the current company).
+- function announce L357
+- property autoPaused L361
+- function checkReturn L365: Back at the machine after an automatic pause: ask, once.
+- function remind L392
+- property idleMonitor L435: one is created for each setting value and the old one destroyed.
+- property idleMonitorTimeout L436
+- function armIdle L447
+- function idleChanged L460
+- property dataDir L483: Same lookup as the helper's data_dir().
 
 ## SessionEditor.qml (609 lines)
 The session form: what was done, tags, the work segments and their totals,
@@ -407,7 +407,7 @@ KeyField: typing without an editable Qt text control. Run:
 ## tests/qml/tst_timefield.qml (53 lines)
 TimeField keeps what is typed (review 2026-10-27). Run:
 
-## tests/test_companies.py (569 lines)
+## tests/test_companies.py (570 lines)
 Companies, contract periods and billing cycles (v2):
 - const FIXTURE_TERMS L12
 - const HELPER L15
@@ -417,13 +417,13 @@ Companies, contract periods and billing cycles (v2):
 - def seg(start, end) L30
 - class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies]
 
-## tests/test_worklog.py (511 lines)
+## tests/test_worklog.py (558 lines)
 Data layer tests: python3 -m unittest discover -s tests
-- const FIXTURE_TERMS L12
-- const HELPER L14
-- class Helper L17 [setUp, tearDown, run_cmd, log, has_active, active, test_full_cycle, test_commands_in_wrong_state_are_no_ops, test_start_while_paused_resumes, test_idle_pause_back_dated_and_clamped, test_unpause_counts_the_gap_as_work, test_back_from_review, test_confirm_without_args_uses_the_draft, test_discard, test_draft_survives, test_start_with_earlier_segments, test_start_with_closed_last_segment_refused, test_recover_same_boot_fresh_heartbeat, test_recover_stale_heartbeat, test_recover_other_boot, test_recover_keeps_review, test_midnight_split, test_dst_weekend_counts_real_seconds, test_week_figures, test_trend_has_eight_weeks_oldest_first, test_month_and_money, test_money_over_the_package, test_legacy_settings_seed_the_first_company, test_validation, test_overlap_with_other_session_and_running, test_short_segments_dropped_at_confirm, test_empty_session_cannot_be_confirmed, test_confirm_with_edited_segments, test_update_delete_and_sorting, test_sessions_by_week_and_month, test_backup_once_per_day, test_corrupt_log_moved_aside, test_concurrent_writers, test_export_week, test_export_month_spanish_rounded_with_discount, test_confirm_retried_after_a_cut_does_not_duplicate, test_recover_drops_an_already_confirmed_active, test_export_clips_sessions_to_the_period, test_unpause_after_restart_keeps_the_counted_time, test_resume_refreshes_the_heartbeat, test_unpause_refuses_an_overlap, test_malformed_session_answers_in_json_and_keeps_the_file, test_group_writable_data_dir_is_tightened, test_csv_cells_never_start_a_formula, test_interrupted_backup_leaves_no_daily_backup]
+- const FIXTURE_TERMS L13
+- const HELPER L15
+- class Helper L18 [setUp, tearDown, run_cmd, log, has_active, active, test_full_cycle, test_commands_in_wrong_state_are_no_ops, test_start_while_paused_resumes, test_idle_pause_back_dated_and_clamped, test_unpause_counts_the_gap_as_work, test_back_from_review, test_confirm_without_args_uses_the_draft, test_discard, test_draft_survives, test_start_with_earlier_segments, test_start_with_closed_last_segment_refused, test_recover_same_boot_fresh_heartbeat, test_recover_stale_heartbeat, test_recover_other_boot, test_recover_keeps_review, test_midnight_split, test_dst_weekend_counts_real_seconds, test_week_figures, test_trend_has_eight_weeks_oldest_first, test_month_and_money, test_money_over_the_package, test_legacy_settings_seed_the_first_company, test_validation, test_overlap_with_other_session_and_running, test_short_segments_dropped_at_confirm, test_empty_session_cannot_be_confirmed, test_confirm_with_edited_segments, test_update_delete_and_sorting, test_sessions_by_week_and_month, test_backup_once_per_day, test_corrupt_log_moved_aside, test_concurrent_writers, test_export_week, test_export_month_spanish_rounded_with_discount, test_confirm_retried_after_a_cut_does_not_duplicate, test_recover_drops_an_already_confirmed_active, test_export_clips_sessions_to_the_period, test_unpause_after_restart_keeps_the_counted_time, test_resume_refreshes_the_heartbeat, test_unpause_refuses_an_overlap, test_malformed_session_answers_in_json_and_keeps_the_file, test_group_writable_data_dir_is_tightened, test_csv_cells_never_start_a_formula, test_interrupted_backup_leaves_no_daily_backup, helper, test_stdin_arguments_stay_off_the_command_line, test_bad_stdin_arguments_are_refused, test_command_line_arguments_still_work, test_refusals_never_echo_a_tag]
 
-## worklog.py (2217 lines)
+## worklog.py (2237 lines)
 Worklog data helper: the only writer of the worklog files.
 - const VERSION L45
 - const MIN_SEGMENT_SEC L46
@@ -562,4 +562,6 @@ Worklog data helper: the only writer of the worklog files.
 - const LOG_WRITERS L2137
 - def parser() L2140
 - def run(argv) L2166
-- def main(argv) L2198
+- const MAX_STDIN L2198
+- def stdin_argv() L2201: `worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
+- def main(argv) L2217
