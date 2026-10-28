@@ -162,3 +162,7 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 ## 2026-10-28 · Cycle and week lines name their scope
 **Decision.** Under the cycle meter the line reads "behind 2h 32m · 38h 09m left in 24 days" (`cycleLeftLine`); the week line reads "Week guide: 9h 50m of 12h, 2h 10m to go" (`weekGuideLine`), without a per-day figure.
 **Why.** Kike: "This week … · 25m a day" sat under the cycle meter and read as what the cycle needed a day, which was four times more. Weeks are a guide; only the cycle total is owed.
+
+## 2026-10-28 · Retarget an open `[Verify]` issue instead of queueing releases
+**Decision.** While a `[Verify]` issue is open, a newer release retargets it (title and target commit) rather than waiting for approval and filing a second issue. 0.3.2 replaced 0.3.1 in #13095.
+**Why.** Kike: queueing means two validations and disturbing the maintainer twice.
