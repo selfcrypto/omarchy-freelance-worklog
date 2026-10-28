@@ -76,7 +76,7 @@ test("month pace and money", () => {
   assert.strictEqual(m.workedSec, 21.5 * 3600)
   assert.strictEqual(m.expectedSec, Math.round(40 * 3600 * 27 / 31))
   assert.ok(m.balanceSec < 0)
-  assert.match(M.paceLine(m), /^behind /)
+  assert.match(M.paceLine(m), / behind pace$/)
   // Projected on the 40 h owed: 40 h at 50 is 2.000, the package 1.600.
   assert.strictEqual(m.money.standardValue, 2000)
   assert.strictEqual(m.money.discount, 400)
@@ -385,4 +385,10 @@ test("the cycle and the week lines say which they are about", () => {
     "Week guide: 7h 50m of 10h, 2h 10m to go")
   assert.strictEqual(M.weekGuideLine({ workedSec: 11 * 3600, targetSec: 10 * 3600, remainingSec: 0, done: true }), "Week guide: 11h of 10h, done")
   assert.strictEqual(M.weekGuideLine({ workedSec: 3600, targetSec: 0 }), "This week 1h")
+})
+
+test("the pace says it is the cycle's pace", () => {
+  assert.strictEqual(M.paceLine({ balanceSec: -(2 * 3600 + 18 * 60) }), "2h 18m behind pace")
+  assert.strictEqual(M.paceLine({ balanceSec: 3600 }), "1h ahead of pace")
+  assert.strictEqual(M.paceLine({ balanceSec: 600 }), "on pace")
 })

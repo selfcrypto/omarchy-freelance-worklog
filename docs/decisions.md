@@ -166,3 +166,7 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 ## 2026-10-28 · Retarget an open `[Verify]` issue instead of queueing releases
 **Decision.** While a `[Verify]` issue is open, a newer release retargets it (title and target commit) rather than waiting for approval and filing a second issue. 0.3.2 replaced 0.3.1 in #13095.
 **Why.** Kike: queueing means two validations and disturbing the maintainer twice.
+
+## 2026-10-28 · The pace line names the cycle
+**Decision.** The track page's pace row reads "Cycle: 2h 18m behind pace, 37h 54m left in 23 days" over "Week guide: 10h 06m of 12h, 1h 54m to go"; `paceLine` says "behind pace" / "ahead of pace" everywhere; the meter's tooltip says the tick is the owed hours spread over the cycle's days. Replaces the bare "behind 2h 18m" of the entry "Cycle and week lines name their scope".
+**Why.** Kike read "behind 2h 18m" as the shortfall against the 12 h week, next to the week guide's "1h 54m to go"; both numbers were near each other and only one said what it measured.

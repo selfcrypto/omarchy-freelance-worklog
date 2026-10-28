@@ -301,7 +301,7 @@ function weekLine(live) {
 }
 
 // The track page's cycle line after the pace: what the cycle still owes and
-// in how many days, as one phrase so it cannot be read as the week's.
+// in how many days ("Cycle: 2h 18m behind pace, 37h 54m left in 23 days").
 function cycleLeftLine(live) {
   if (!(live.remainingSec > 0)) return "package done"
   return fmtDuration(live.remainingSec) + " left in " + live.daysLeft + (live.daysLeft === 1 ? " day" : " days")
@@ -315,10 +315,12 @@ function weekGuideLine(live) {
   return head + (live.done ? ", done" : ", " + fmtDuration(live.remainingSec) + " to go")
 }
 
+// Worked against what the cycle's pace expects by today (the owed hours
+// spread over its days): "2h 18m behind pace", "1h ahead of pace", "on pace".
 function paceLine(live) {
   var b = live.balanceSec
   if (Math.abs(b) < 15 * 60) return "on pace"
-  return (b > 0 ? "ahead " : "behind ") + fmtDuration(Math.abs(b))
+  return fmtDuration(Math.abs(b)) + (b > 0 ? " ahead of pace" : " behind pace")
 }
 
 // Every line of an hourly cycle at the same rate and VAT (one sentence

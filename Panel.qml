@@ -1692,28 +1692,37 @@ Panel {
                 HoverHandler { id: meterHover }
                 PanelToolTip {
                   visible: meterHover.hovered
-                  text: root.month ? "The tick is the pace: " + Model.fmtDuration(root.month.expectedSec) + " by today" : ""
+                  text: root.month ? "The tick is the cycle's pace: " + Model.fmtDuration(root.month.expectedSec) + " by today, the "
+                    + Model.fmtDuration(root.month.targetSec) + " owed spread over the cycle's days" : ""
                   fontFamily: root.fontFamily
                 }
               }
 
+              // "Cycle: 2h 18m behind pace, 37h 54m left in 23 days": the scope
+              // first, as on the week line under it, so neither is read as the other.
               RowLayout {
                 width: parent.width
                 visible: root.month !== null && root.month.billing === "package"
-                spacing: Style.space(6)
+                spacing: 0
 
+                Text {
+                  text: "Cycle: "
+                  textFormat: Text.PlainText
+                  color: root.dim
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                }
                 Text {
                   text: root.month ? Model.paceLine(root.month) : ""
                   textFormat: Text.PlainText
                   color: root.month && root.month.balanceSec <= -15 * 60 ? root.urgent : root.foreground
                   font.family: root.fontFamily
-                  font.pixelSize: Style.font.body
+                  font.pixelSize: Style.font.caption
                   font.bold: true
                 }
-
                 Text {
                   Layout.fillWidth: true
-                  text: root.month ? "· " + Model.cycleLeftLine(root.month) : ""
+                  text: root.month ? ", " + Model.cycleLeftLine(root.month) : ""
                   textFormat: Text.PlainText
                   color: root.dim
                   font.family: root.fontFamily

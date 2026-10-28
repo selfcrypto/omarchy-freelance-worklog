@@ -51,7 +51,7 @@ A text field without an editable Qt text control. It draws plain Text and
 - property wordTail L233: leaves the caret at most one line above the bottom edge.
 - property caretBottom L234
 
-## Model.js (780 lines)
+## Model.js (782 lines)
 Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - const DAY_NAMES L6
 - const MONTH_NAMES L7
@@ -90,48 +90,48 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function monthLive L281
 - function openSecByPart L288: from local midnight of its first day to local midnight after its last.
 - function weekLine L295: "9h 40m of 12h · 2h 20m left · 3 days left · 47m a day"; no guide: hours only.
-- function cycleLeftLine L305: in how many days, as one phrase so it cannot be read as the week's.
+- function cycleLeftLine L305: in how many days ("Cycle: 2h 18m behind pace, 37h 54m left in 23 days").
 - function weekGuideLine L312: only the cycle total is owed. No guide: the week's hours.
-- function paceLine L318
-- function uniformHourly L326: says it all); otherwise each part gets its own line.
-- function monthLine L334: The package line of a cycle: running, finished short or over, hourly, none.
-- function moneySummary L350: { label, amount }; the month page shows the whole breakdown.
-- function daysInMonth L363
-- function shiftMonth L365
-- function monthKey L370
-- function cycleFirst L372
-- function cycleBounds L375: { first, last } date keys of the cycle that starts in month `key`.
-- function cycleOf L384: Key of the cycle holding the date key.
-- function shiftCycle L393
-- function cycleLabel L400: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
-- function dayMonth L411: "21 Oct" / "21 Oct 2026".
-- function ordinal L416
-- function cycleName L421
-- function companyOf L425
-- function companyName L431
-- function activeCompanies L436
-- function nextInList L444: The element after (or before) `current` in `list`, wrapping.
-- function termsLine L451: "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
-- const TERM_RANGES L457
-- function checkTerms L464: clean_terms and parse_day). Returns { error, field }.
-- function sessionTip L484: Hover text of a session row on the month page.
-- function niceHours L500: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
-- function barHeight L506
-- function daySeries L512: The 7 bars of the week chart, the open segment added to today.
-- function weekSeries L530: The 8 bars of the trend, this week (live) last.
-- function monthOpenSecBetween L548: The live segment's seconds that count on the month page (its company, or all).
-- function dayOpenSec L556: midnight (a DST day lasts 23 or 25 hours).
-- function cycleDaySeries L562: Mondays and the days new terms start; markers where terms start.
-- function cycleWeekSeries L582: The ISO weeks touching the cycle, hours inside the cycle only.
-- function rowsFromSegments L608: midnight, `to` -1 while open). Built from stored segments.
-- function rowEndDays L631: end is earlier than the start (past midnight), else 0.
-- function rowInstant L641: midnight or for days), so only its minutes are compared.
-- function checkRows L650: pausedSec, first, last }.
-- function parseTags L700
-- function clip L710
-- function firstLine L715
+- function paceLine L320: spread over its days): "2h 18m behind pace", "1h ahead of pace", "on pace".
+- function uniformHourly L328: says it all); otherwise each part gets its own line.
+- function monthLine L336: The package line of a cycle: running, finished short or over, hourly, none.
+- function moneySummary L352: { label, amount }; the month page shows the whole breakdown.
+- function daysInMonth L365
+- function shiftMonth L367
+- function monthKey L372
+- function cycleFirst L374
+- function cycleBounds L377: { first, last } date keys of the cycle that starts in month `key`.
+- function cycleOf L386: Key of the cycle holding the date key.
+- function shiftCycle L395
+- function cycleLabel L402: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
+- function dayMonth L413: "21 Oct" / "21 Oct 2026".
+- function ordinal L418
+- function cycleName L423
+- function companyOf L427
+- function companyName L433
+- function activeCompanies L438
+- function nextInList L446: The element after (or before) `current` in `list`, wrapping.
+- function termsLine L453: "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
+- const TERM_RANGES L459
+- function checkTerms L466: clean_terms and parse_day). Returns { error, field }.
+- function sessionTip L486: Hover text of a session row on the month page.
+- function niceHours L502: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
+- function barHeight L508
+- function daySeries L514: The 7 bars of the week chart, the open segment added to today.
+- function weekSeries L532: The 8 bars of the trend, this week (live) last.
+- function monthOpenSecBetween L550: The live segment's seconds that count on the month page (its company, or all).
+- function dayOpenSec L558: midnight (a DST day lasts 23 or 25 hours).
+- function cycleDaySeries L564: Mondays and the days new terms start; markers where terms start.
+- function cycleWeekSeries L584: The ISO weeks touching the cycle, hours inside the cycle only.
+- function rowsFromSegments L610: midnight, `to` -1 while open). Built from stored segments.
+- function rowEndDays L633: end is earlier than the start (past midnight), else 0.
+- function rowInstant L643: midnight or for days), so only its minutes are compared.
+- function checkRows L652: pausedSec, first, last }.
+- function parseTags L702
+- function clip L712
+- function firstLine L717
 
-## Panel.qml (3044 lines)
+## Panel.qml (3053 lines)
 Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property svc L29
 - property ready L30
@@ -412,7 +412,7 @@ A column chart drawn with Rectangles: one bar per entry of `series`
 - property thinLabels L47
 - function barColor L51
 
-## tests/model.test.js (388 lines)
+## tests/model.test.js (394 lines)
 Model.js: TZ=Europe/Madrid node --test tests
 - const NOW L7
 - function pkg L9
