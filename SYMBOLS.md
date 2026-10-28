@@ -60,7 +60,7 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function fmtDuration L13: 4h 12m, 4h, 47m, 0m. Negative values keep their sign.
 - function fmtClock L25: The pill clock: 0:07, 1:23, 12:05 (hours and minutes).
 - function fmtHours L32: Hours for chart readouts: 3.5 -> "3h 30m".
-- function fmtMoney L35: Spanish money format, as the reports write it: 1.800 €, 37,50 €.
+- function fmtMoney L35: Spanish money format, as the reports write it: 1.600 €, 42,50 €.
 - function fmtPercent L44
 - function parseIso L49
 - function isoOf L54
@@ -109,7 +109,7 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function companyName L416
 - function activeCompanies L421
 - function nextInList L429: The element after (or before) `current` in `list`, wrapping.
-- function termsLine L436: "48h · 1.800 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
+- function termsLine L436: "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
 - const TERM_RANGES L442
 - function checkTerms L449: clean_terms and parse_day). Returns { error, field }.
 - function sessionTip L469: Hover text of a session row on the month page.
@@ -409,7 +409,7 @@ A column chart drawn with Rectangles: one bar per entry of `series`
 - property thinLabels L47
 - function barColor L51
 
-## tests/model.test.js (362 lines)
+## tests/model.test.js (366 lines)
 Model.js: TZ=Europe/Madrid node --test tests
 - const NOW L7
 - function pkg L9
@@ -430,7 +430,7 @@ KeyField: typing without an editable Qt text control. Run:
 ## tests/qml/tst_timefield.qml (53 lines)
 TimeField keeps what is typed (review 2026-10-27). Run:
 
-## tests/test_companies.py (607 lines)
+## tests/test_companies.py (611 lines)
 Companies, contract periods and billing cycles (v2):
 - const FIXTURE_TERMS L12
 - const HELPER L15
@@ -440,7 +440,7 @@ Companies, contract periods and billing cycles (v2):
 - def seg(start, end) L30
 - class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies, test_half_cent_vat_rounds_up, test_report_keeps_a_fractional_vat_rate, test_resume_cannot_overlap_a_confirmed_session_or_start_later, test_month_lists_a_session_on_every_day_it_has_work]
 
-## tests/test_worklog.py (558 lines)
+## tests/test_worklog.py (559 lines)
 Data layer tests: python3 -m unittest discover -s tests
 - const FIXTURE_TERMS L13
 - const HELPER L15
@@ -558,7 +558,7 @@ Worklog data helper: the only writer of the worklog files.
 - def cmd_month(store, args, now) L1575: The month page: one company's cycle, or a calendar month for all.
 - const TEXT L1652
 - def fmt_duration(sec) L1748
-- def fmt_money(value, lang, currency) L1759: 1.800,00 €: Spanish separators in both report languages, as the
+- def fmt_money(value, lang, currency) L1759: 1.600,00 €: Spanish separators in both report languages, as the
 - def fmt_number(value, lang, digits) L1766
 - def fmt_rate(value, lang) L1770: A VAT rate as given: 21, 7,5, 10,25 (no rounding to whole points).
 - def ordinal(n) L1775

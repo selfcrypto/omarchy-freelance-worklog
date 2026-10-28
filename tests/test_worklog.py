@@ -10,7 +10,7 @@ import tempfile
 import time
 import unittest
 
-FIXTURE_TERMS = {"weeklyTargetHours": 12, "monthlyHours": 48, "monthlyFee": 1800, "standardRate": 60}
+FIXTURE_TERMS = {"weeklyTargetHours": 10, "monthlyHours": 40, "monthlyFee": 1600, "standardRate": 50}
 
 HELPER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "worklog.py")
 
@@ -28,7 +28,7 @@ class Helper(unittest.TestCase):
     def run_cmd(self, *args, now=None, ok=True, config=None):
         env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=now or self.now, WORKLOG_TZ="Europe/Madrid")
         argv = list(args)
-        # Fixtures assume a 48 h / 1.800 / 60 €/h package: seeded as v1 settings.
+        # Fixtures assume a 40 h / 1.600 / 50 €/h package: seeded as v1 settings.
         config = dict(config or {})
         if "legacy" not in config and not any(k in config for k in FIXTURE_TERMS):
             config["legacy"] = FIXTURE_TERMS
@@ -198,7 +198,7 @@ class Helper(unittest.TestCase):
         self.assertEqual(w["key"], "2026-W44")
         self.assertEqual(w["start"], "2026-10-26")
         self.assertEqual(w["workedSec"], 4 * 3600)
-        self.assertEqual(w["targetSec"], 12 * 3600)
+        self.assertEqual(w["targetSec"], 10 * 3600)
         self.assertEqual(w["daysLeft"], 6)  # Tuesday through Sunday
         sunday = self.run_cmd("view", now="2026-11-01T10:00:00Z")["view"]["week"]
         self.assertEqual(sunday["daysLeft"], 1)
@@ -215,16 +215,17 @@ class Helper(unittest.TestCase):
         self.run_cmd("add", "--segments", json.dumps(segs), "--summary", "ten hours")
         m = self.run_cmd("view")["view"]["month"]
         self.assertEqual(m["key"], "2026-10")
-        self.assertEqual(m["targetSec"], 48 * 3600)
+        self.assertEqual(m["targetSec"], 40 * 3600)
         self.assertEqual(m["workedSec"], 10 * 3600)
         self.assertEqual(m["elapsedDays"], 27)
         self.assertEqual(m["daysLeft"], 5)
         money = m["money"]
         self.assertTrue(money["projected"])
-        self.assertEqual(money["standardValue"], 2880)
-        self.assertEqual(money["discount"], 1080)
-        self.assertEqual(money["discountPercent"], 37.5)
-        self.assertEqual(money["effectiveRate"], 37.5)
+        # Projected on the 40 h owed: 40 h at 50 is 2.000, the package 1.600.
+        self.assertEqual(money["standardValue"], 2000)
+        self.assertEqual(money["discount"], 400)
+        self.assertEqual(money["discountPercent"], 20)
+        self.assertEqual(money["effectiveRate"], 40)
 
     def test_money_over_the_package(self):
         segs = [{"start": "2026-10-%02dT07:00:00Z" % d, "end": "2026-10-%02dT17:00:00Z" % d} for d in range(1, 7)]
@@ -232,11 +233,11 @@ class Helper(unittest.TestCase):
             self.run_cmd("add", "--segments", json.dumps([s]), "--summary", "long day")
         money = self.run_cmd("view")["view"]["month"]["money"]
         self.assertFalse(money["projected"])
-        self.assertEqual(money["standardValue"], 60 * 60)
-        self.assertEqual(money["overHours"], 12)
-        # The 12 h over the package are billed at the extra hour rate (the standard rate by default).
-        self.assertEqual((money["fee"], money["overageNet"], money["net"]), (1800, 720, 2520))
-        self.assertEqual(money["effectiveRate"], 42)
+        self.assertEqual(money["standardValue"], 60 * 50)
+        self.assertEqual(money["overHours"], 20)
+        # The 20 h over the package are billed at the extra hour rate (the standard rate by default).
+        self.assertEqual((money["fee"], money["overageNet"], money["net"]), (1600, 1000, 2600))
+        self.assertEqual(money["effectiveRate"], 43.33)
 
     def test_legacy_settings_seed_the_first_company(self):
         v = self.run_cmd("view", config={"weeklyTargetHours": 10, "monthlyHours": 40, "monthlyFee": 1000})["view"]
@@ -384,9 +385,9 @@ class Helper(unittest.TestCase):
             md = f.read()
         self.assertIn("octubre de 2026", md)
         self.assertIn("| mar 27 oct | 09:00 a 11:08 | 2h 15m |  | Hecho. |", md)
-        self.assertIn("1.800,00 € + IVA 21 % (378,00 €) = 2.178,00 €", md)
-        self.assertIn("2.880,00 €", md)
-        self.assertIn("1.080,00 € (37,5 %)", md)
+        self.assertIn("1.600,00 € + IVA 21 % (336,00 €) = 1.936,00 €", md)
+        self.assertIn("2.000,00 €", md)
+        self.assertIn("400,00 € (20,0 %)", md)
         self.assertIn("redondeada", md)
 
     # ------------------------------------------------------------ review 2026-10-27 (Codex)
@@ -422,14 +423,14 @@ class Helper(unittest.TestCase):
         now = "2026-11-02T10:00:00Z"
         self.run_cmd("add", "--segments", json.dumps(segs), "--summary", "across months", now=now)
         self.run_cmd("contract", "--action", "set", "--id", "c_0001", "--from", "2026-10-01", "--replace", "2026-11-01",
-                     "--terms", json.dumps({"monthlyHours": 48}), now=now)
+                     "--terms", json.dumps({"monthlyHours": 40}), now=now)
         for month in ("2026-10", "2026-11"):
             r = self.run_cmd("export", "--month", month, "--out", self.out, now=now)["export"]
             with open(r["csv"], encoding="utf-8") as f:
                 rows = f.read().splitlines()
             self.assertEqual(rows[1].split(",")[4], "60", (month, rows))
             with open(r["markdown"], encoding="utf-8") as f:
-                self.assertIn("Worked: 1h of 48h owed.", f.read())
+                self.assertIn("Worked: 1h of 40h owed.", f.read())
 
     def test_unpause_after_restart_keeps_the_counted_time(self):
         self.run_cmd("start", "--boot-id", "b1", now="2026-10-27T08:00:00Z")

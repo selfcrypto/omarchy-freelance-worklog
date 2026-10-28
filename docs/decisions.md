@@ -144,3 +144,8 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 - KeyField keeps the caret's line in view with two probes: the text to the end of the caret's word wraps exactly as shown, and the caret's line ends no lower than that and at most one line below the text up to the caret; the lower bound is kept in view. Predicting Qt's breaks inside a word (a URL breaks at `/`, `?`, `&`) was tried and failed. Checked against a read-only TextEdit oracle at every caret position of six texts (words, a long word, URLs, hyphens), kept out of the repo, which has no Qt text controls; `scrolledY` gives the repo tests an independent check.
 - A month day row counts the live segment to the next local midnight (`dayOpenSec`), so DST days are 23 or 25 hours, as in the chart.
 **Why.** Asked by Kike as the review before releasing 0.3.0. A focused Sol re-check confirmed six fixes and found the paste byte count and long-word caret incomplete; both were then fixed as above.
+
+## 2026-10-28 · Neutral figures in the tests
+**Decision.** Test fixtures use a 40 h / 1.600 € package at 50 €/h with a 10 h weekly guide (a second period 50 h / 2.100 €, hourly 50 and 100 €/h); every expected value was recomputed by hand from those terms, with the arithmetic in a comment where it is not obvious. Code comments quote the same figures.
+**Why.** Kike: the old fixtures were a real contract and a real rate, in a public repo.
+**Alternative rejected.** Scaling the old numbers: they would still read as the real contract.

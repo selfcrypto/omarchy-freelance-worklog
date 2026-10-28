@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 
-FIXTURE_TERMS = {"weeklyTargetHours": 12, "monthlyHours": 48, "monthlyFee": 1800, "standardRate": 60}
+FIXTURE_TERMS = {"weeklyTargetHours": 10, "monthlyHours": 40, "monthlyFee": 1600, "standardRate": 50}
 from datetime import date
 
 HELPER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "worklog.py")
@@ -43,7 +43,7 @@ class Companies(unittest.TestCase):
     def run_cmd(self, *args, now=NOW, ok=True, config=None):
         env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=now, WORKLOG_TZ="Europe/Madrid")
         argv = list(args)
-        # Fixtures assume a 48 h / 1.800 / 60 €/h package: seeded as v1 settings.
+        # Fixtures assume a 40 h / 1.600 / 50 €/h package: seeded as v1 settings.
         config = dict(config or {})
         if "legacy" not in config and not any(k in config for k in FIXTURE_TERMS):
             config["legacy"] = FIXTURE_TERMS
@@ -65,7 +65,7 @@ class Companies(unittest.TestCase):
         return self.run_cmd(*args, now=now)
 
     def terms(self, cid, frm, now=NOW, replace=None, **kw):
-        kw.setdefault("standardRate", 60)
+        kw.setdefault("standardRate", 50)
         args = ["contract", "--action", "set", "--id", cid, "--from", frm, "--terms", json.dumps(kw)]
         if replace:
             args += ["--replace", replace]
@@ -150,40 +150,44 @@ class Companies(unittest.TestCase):
 
     def test_terms_in_force_and_uncontracted(self):
         self.run_cmd("company", "--action", "rename", "--id", "c_0001", "--cycle-day", "21")
-        self.terms("c_0001", "2026-10-21", replace="2026-10-01", monthlyHours=48, monthlyFee=1800)
-        self.terms("c_0001", "2027-01-21", monthlyHours=60, monthlyFee=2250)
+        self.terms("c_0001", "2026-10-21", replace="2026-10-01", monthlyHours=40, monthlyFee=1600)
+        self.terms("c_0001", "2027-01-21", monthlyHours=50, monthlyFee=2100)
         now = "2027-03-01T10:00:00Z"
-        self.assertEqual(self.figures("2026-12", "c_0001", now)["parts"][0]["monthlyFee"], 1800)
-        self.assertEqual(self.figures("2027-01", "c_0001", now)["parts"][0]["monthlyFee"], 2250)
+        self.assertEqual(self.figures("2026-12", "c_0001", now)["parts"][0]["monthlyFee"], 1600)
+        self.assertEqual(self.figures("2027-01", "c_0001", now)["parts"][0]["monthlyFee"], 2100)
         sep = self.figures("2026-09", "c_0001", now)
         self.assertEqual(sep["billing"], "none")
         self.assertEqual(sep["targetSec"], 0)
         self.assertEqual(sep["money"]["net"], 0)
 
     def test_partial_first_month_under_calendar_cycles(self):
-        self.terms("c_0001", "2026-10-21", replace="2026-10-01", monthlyHours=48, monthlyFee=1800)
+        self.terms("c_0001", "2026-10-21", replace="2026-10-01", monthlyHours=40, monthlyFee=1600)
         f = self.figures("2026-10", "c_0001")
         self.assertEqual(f["billing"], "mixed")
-        self.assertEqual(f["targetSec"], round(48 * 3600 * 11 / 31 / 60) * 60)
-        self.assertEqual(f["money"]["net"], round(1800 * 11 / 31, 2))
+        self.assertEqual(f["targetSec"], round(40 * 3600 * 11 / 31 / 60) * 60)
+        self.assertEqual(f["money"]["net"], round(1600 * 11 / 31, 2))
 
     # -------------------------------------------------------------- 4
 
     def test_mid_cycle_change_prorated(self):
-        self.terms("c_0001", "2026-11-01", replace="2026-10-01", monthlyHours=48, monthlyFee=1800)
-        self.terms("c_0001", "2026-11-16", monthlyHours=60, monthlyFee=2250)
+        self.terms("c_0001", "2026-11-01", replace="2026-10-01", monthlyHours=40, monthlyFee=1600)
+        self.terms("c_0001", "2026-11-16", monthlyHours=50, monthlyFee=2100)
         now = "2026-11-20T20:00:00Z"
-        for day in range(2, 8):
+        for day in range(2, 7):  # 5 days of 9 h: the 45 h owed, nothing over
             self.add([seg("2026-11-%02dT07:00:00Z" % day, "2026-11-%02dT16:00:00Z" % day)], now=now)
         f = self.figures("2026-11", "c_0001", now)
         self.assertEqual([p["days"] for p in f["parts"]], [15, 15])
-        self.assertEqual(f["targetSec"], 54 * 3600)
-        self.assertEqual(f["expectedSec"], 34 * 3600)
+        # Half the cycle at 40 h and half at 50 h: 20 + 25 owed.
+        self.assertEqual(f["targetSec"], 45 * 3600)
+        # By the 20th: all of the first half, 5 of 15 days of the second.
+        self.assertEqual(f["expectedSec"], 20 * 3600 + 25 * 3600 * 5 // 15)
         m = f["money"]
-        self.assertEqual((m["net"], m["vat"], m["gross"]), (2025, 425.25, 2450.25))
-        self.assertEqual((m["standardValue"], m["discount"], m["effectiveRate"]), (3240, 1215, 37.5))
+        # Fees 800 + 1.050; VAT 21 %.
+        self.assertEqual((m["net"], m["vat"], m["gross"]), (1850, 388.5, 2238.5))
+        # 45 h at 50 is 2.250.
+        self.assertEqual((m["standardValue"], m["discount"], m["effectiveRate"]), (2250, 400, 41.11))
         on10 = self.run_cmd("view", now="2026-11-10T12:00:00Z")["view"]["month"]
-        self.assertEqual(on10["expectedSec"], 16 * 3600)
+        self.assertEqual(on10["expectedSec"], 20 * 3600 * 10 // 15)
         self.terms("c_0001", "2026-11-16", billing="hourly", standardRate=70, now=now)
         f = self.figures("2026-11", "c_0001", now)
         self.assertEqual(f["billing"], "mixed")
@@ -194,32 +198,32 @@ class Companies(unittest.TestCase):
 
     def test_fee_change_does_not_alter_past_cycles(self):
         self.run_cmd("company", "--action", "rename", "--id", "c_0001", "--cycle-day", "21")
-        self.terms("c_0001", "2026-10-21", replace="2026-10-01", monthlyHours=48, monthlyFee=1800)
+        self.terms("c_0001", "2026-10-21", replace="2026-10-01", monthlyHours=40, monthlyFee=1600)
         now = "2026-11-25T10:00:00Z"
         self.add([seg("2026-10-27T08:00:00Z", "2026-10-27T12:00:00Z")], now=now)
         before = self.month("2026-10", "c_0001", now)
         r1 = self.run_cmd("export", "--month", "2026-10", "--out", self.out, now=now)["export"]
-        self.terms("c_0001", "2026-11-21", monthlyHours=48, monthlyFee=2000, now=now)
+        self.terms("c_0001", "2026-11-21", monthlyHours=40, monthlyFee=1700, now=now)
         self.assertEqual(self.month("2026-10", "c_0001", now), before)
         r2 = self.run_cmd("export", "--month", "2026-10", "--out", self.out, now=now)["export"]
         for kind in ("markdown", "csv", "html"):
             with open(r1[kind]) as a, open(r2[kind]) as b:
                 self.assertEqual(a.read(), b.read(), kind)
-        self.assertEqual(self.figures("2026-11", "c_0001", now)["money"]["net"], 2000)
+        self.assertEqual(self.figures("2026-11", "c_0001", now)["money"]["net"], 1700)
 
     # -------------------------------------------------------------- 6
 
     def test_hourly_company(self):
-        self.terms("c_0001", "2026-10-01", billing="hourly", standardRate=60, vatPercent=21)
+        self.terms("c_0001", "2026-10-01", billing="hourly", standardRate=50, vatPercent=21)
         self.add([seg("2026-10-05T08:00:00Z", "2026-10-05T18:00:00Z")])
         f = self.figures("2026-10", "c_0001")
         self.assertEqual(f["targetSec"], 0)
-        self.assertEqual((f["money"]["net"], f["money"]["gross"]), (600, 726))
+        self.assertEqual((f["money"]["net"], f["money"]["gross"]), (500, 605))
         self.assertIsNone(f["money"]["discount"])
         r = self.run_cmd("export", "--month", "this", "--out", self.out)["export"]
         with open(r["markdown"]) as fh:
             md = fh.read()
-        self.assertIn("Billed at 60,00 €/h: 600,00 € + VAT 21 % (126,00 €) = 726,00 €.", md)
+        self.assertIn("Billed at 50,00 €/h: 500,00 € + VAT 21 % (105,00 €) = 605,00 €.", md)
         self.assertNotIn("owed", md)
         bad = self.run_cmd("contract", "--action", "set", "--id", "c_0001", "--from", "2026-10-01",
                            "--terms", json.dumps({"billing": "package", "monthlyHours": 0}), ok=False)
@@ -356,8 +360,8 @@ class Companies(unittest.TestCase):
         with open(r["markdown"]) as f:
             md = f.read()
         self.assertIn("# Work report for Company, October 2026", md)
-        self.assertIn("Terms: package of 48h a cycle, 1.800,00 € + VAT 21 %, standard rate 60,00 €/h, extra hours at 60,00 €/h, calendar month.", md)
-        self.assertIn("Worked: 2h of 48h owed. 46h under the package.", md)
+        self.assertIn("Terms: package of 40h a cycle, 1.600,00 € + VAT 21 %, standard rate 50,00 €/h, extra hours at 50,00 €/h, calendar month.", md)
+        self.assertIn("Worked: 2h of 40h owed. 38h under the package.", md)
         no_html = self.run_cmd("export", "--month", "this", "--out", self.out, config={"reportHtml": False})["export"]
         self.assertNotIn("html", no_html)
         b = self.company("Beta Labs", cycle_day=21)
@@ -381,17 +385,17 @@ class Companies(unittest.TestCase):
         self.assertEqual(len(every["reports"]), 2)
 
     def test_report_split_and_uncontracted(self):
-        self.terms("c_0001", "2026-11-06", replace="2026-10-01", monthlyHours=48, monthlyFee=1800)
-        self.terms("c_0001", "2026-11-16", monthlyHours=60, monthlyFee=2250)
+        self.terms("c_0001", "2026-11-06", replace="2026-10-01", monthlyHours=40, monthlyFee=1600)
+        self.terms("c_0001", "2026-11-16", monthlyHours=50, monthlyFee=2100)
         now = "2026-12-02T10:00:00Z"
         self.add([seg("2026-11-02T08:00:00Z", "2026-11-02T10:00:00Z")], now=now)
         r = self.run_cmd("export", "--month", "2026-11", "--out", self.out, now=now)["export"]
         with open(r["markdown"]) as f:
             md = f.read()
-        self.assertIn("Terms from 16 Nov 2026: package of 60h a cycle", md)
+        self.assertIn("Terms from 16 Nov 2026: package of 50h a cycle", md)
         self.assertIn("No terms before 6 Nov 2026: 2h not billed.", md)
         self.assertIn("Total:", md)
-        self.terms("c_0001", "2026-11-01", monthlyHours=48, monthlyFee=1800, now=now)
+        self.terms("c_0001", "2026-11-01", monthlyHours=40, monthlyFee=1600, now=now)
         r = self.run_cmd("export", "--month", "2026-11", "--out", self.out, now=now)["export"]
         with open(r["markdown"]) as f:
             md = f.read()
@@ -433,18 +437,18 @@ class Companies(unittest.TestCase):
     # -------------------------------------------------------------- Codex review 2026-10-28
 
     def test_report_splits_a_session_over_a_terms_change(self):
-        # F1: hourly 60 €/h, then 120 €/h from 16 Nov; one session across local midnight.
-        self.terms("c_0001", "2026-11-01", replace="2026-10-01", billing="hourly", standardRate=60, vatPercent=0)
-        self.terms("c_0001", "2026-11-16", billing="hourly", standardRate=120, vatPercent=0)
+        # F1: hourly 50 €/h, then 100 €/h from 16 Nov; one session across local midnight.
+        self.terms("c_0001", "2026-11-01", replace="2026-10-01", billing="hourly", standardRate=50, vatPercent=0)
+        self.terms("c_0001", "2026-11-16", billing="hourly", standardRate=100, vatPercent=0)
         now = "2026-12-02T10:00:00Z"
         self.add([seg("2026-11-15T22:00:00Z", "2026-11-16T00:00:00Z")], now=now)
-        self.assertEqual(self.figures("2026-11", "c_0001", now)["money"]["net"], 180)
+        self.assertEqual(self.figures("2026-11", "c_0001", now)["money"]["net"], 150)
         r = self.run_cmd("export", "--month", "2026-11", "--out", self.out, now=now)["export"]
         with open(r["markdown"]) as f:
             md = f.read()
-        self.assertIn("1 to 15 Nov, 1h at 60,00 €/h: 60,00 €.", md)
-        self.assertIn("16 to 30 Nov, 1h at 120,00 €/h: 120,00 €.", md)
-        self.assertIn("Total: 180,00 €", md)
+        self.assertIn("1 to 15 Nov, 1h at 50,00 €/h: 50,00 €.", md)
+        self.assertIn("16 to 30 Nov, 1h at 100,00 €/h: 100,00 €.", md)
+        self.assertIn("Total: 150,00 €", md)
 
     def test_currency_changes_only_on_a_cycle_start(self):
         # F3: two currencies never add up in one cycle.
@@ -489,7 +493,7 @@ class Companies(unittest.TestCase):
         # F9: a string where a number belongs is refused on load, before any write.
         self.add([seg("2026-10-26T08:00:00Z", "2026-10-26T09:00:00Z")])
         path = os.path.join(self.dir, "worklog.json")
-        for patch in ({"cycleDay": "1"}, {"contracts": [dict(self.log()["companies"][0]["contracts"][0], monthlyFee="1800")]}):
+        for patch in ({"cycleDay": "1"}, {"contracts": [dict(self.log()["companies"][0]["contracts"][0], monthlyFee="1600")]}):
             data = self.log()
             data["companies"][0].update(patch)
             text = json.dumps(data)
@@ -500,7 +504,7 @@ class Companies(unittest.TestCase):
             with open(path) as f:
                 self.assertEqual(f.read(), text)
             data["companies"][0]["cycleDay"] = 1
-            data["companies"][0]["contracts"][0]["monthlyFee"] = 1800
+            data["companies"][0]["contracts"][0]["monthlyFee"] = 1600
             with open(path, "w") as f:
                 json.dump(data, f)
 
@@ -522,7 +526,7 @@ class Companies(unittest.TestCase):
     def test_moving_terms_onto_other_terms_is_refused(self):
         self.terms("c_0001", "2026-11-01", monthlyFee=1900)
         r = self.run_cmd("contract", "--action", "set", "--id", "c_0001", "--from", "2026-11-01", "--replace", "2026-10-01",
-                         "--terms", json.dumps({"monthlyFee": 1800}), ok=False)
+                         "--terms", json.dumps({"monthlyFee": 1600}), ok=False)
         self.assertIn("already start", r["error"])
         self.assertEqual(len(self.log()["companies"][0]["contracts"]), 2)
 

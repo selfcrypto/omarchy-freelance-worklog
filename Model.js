@@ -31,7 +31,7 @@ function fmtClock(sec) {
 // Hours for chart readouts: 3.5 -> "3h 30m".
 function fmtHours(hours) { return fmtDuration(hours * 3600) }
 
-// Spanish money format, as the reports write it: 1.800 €, 37,50 €.
+// Spanish money format, as the reports write it: 1.600 €, 42,50 €.
 function fmtMoney(value, currency, decimals) {
   if (value === null || value === undefined || !isFinite(value)) return "–"
   var d = decimals === undefined ? (Math.round(value) === value ? 0 : 2) : decimals
@@ -432,7 +432,7 @@ function nextInList(list, current, step) {
   return list[((i < 0 ? 0 : i + step) % list.length + list.length) % list.length]
 }
 
-// "48h · 1.800 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
+// "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
 function termsLine(t) {
   if (!t) return "no terms"
   if (t.billing === "hourly") return "Hourly " + fmtMoney(t.standardRate, t.currency) + "/h + VAT " + t.vatPercent + " %"

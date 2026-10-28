@@ -9,7 +9,7 @@ const NOW = Date.parse("2026-10-27T17:30:00Z") // Tue 18:30 Madrid
 function pkg(from, to, days, hours, fee, worked, cycleDays) {
   var n = cycleDays || days
   return { from: from, to: to, days: days, billing: "package", monthlyHours: hours, monthlyFee: fee, vatPercent: 21,
-    standardRate: 60, currency: "€", owedSec: Math.round(hours * 3600 * days / n / 60) * 60,
+    standardRate: 50, currency: "€", owedSec: Math.round(hours * 3600 * days / n / 60) * 60,
     fee: Math.round(fee * days / n * 100) / 100, workedSec: worked }
 }
 
@@ -19,19 +19,19 @@ function view(over) {
     active: { closedSec: 5 * 3600, pausedSec: 3600, openStart: "2026-10-27T16:00:00Z", lastEnd: "2026-10-27T15:00:00Z" },
     today: { date: "2026-10-27", startAt: "2026-10-26T23:00:00Z", workedSec: 5 * 3600 },
     week: {
-      startAt: "2026-10-25T23:00:00Z", workedSec: 6 * 3600, targetSec: 12 * 3600, daysLeft: 6,
+      startAt: "2026-10-25T23:00:00Z", workedSec: 6 * 3600, targetSec: 10 * 3600, daysLeft: 6,
       days: [
         { date: "2026-10-26", workedSec: 3600 }, { date: "2026-10-27", workedSec: 5 * 3600 },
         { date: "2026-10-28", workedSec: 0 }, { date: "2026-10-29", workedSec: 0 },
         { date: "2026-10-30", workedSec: 0 }, { date: "2026-10-31", workedSec: 0 }, { date: "2026-11-01", workedSec: 0 }
       ]
     },
-    month: { startAt: "2026-09-30T22:00:00Z", workedSec: 20 * 3600, targetSec: 48 * 3600, days: 31, elapsedDays: 27, daysLeft: 5,
-      expectedSec: Math.round(48 * 3600 * 27 / 31), billing: "package", standardRate: 60, currency: "€", livePart: 0,
-      parts: [pkg("2026-10-01", "2026-10-31", 31, 48, 1800, 20 * 3600)] },
+    month: { startAt: "2026-09-30T22:00:00Z", workedSec: 20 * 3600, targetSec: 40 * 3600, days: 31, elapsedDays: 27, daysLeft: 5,
+      expectedSec: Math.round(40 * 3600 * 27 / 31), billing: "package", standardRate: 50, currency: "€", livePart: 0,
+      parts: [pkg("2026-10-01", "2026-10-31", 31, 40, 1600, 20 * 3600)] },
     trend: [
-      { key: "2026-W43", start: "2026-10-19", workedSec: 13 * 3600, targetSec: 12 * 3600 },
-      { key: "2026-W44", start: "2026-10-26", workedSec: 6 * 3600, targetSec: 12 * 3600 }
+      { key: "2026-W43", start: "2026-10-19", workedSec: 13 * 3600, targetSec: 10 * 3600 },
+      { key: "2026-W44", start: "2026-10-26", workedSec: 6 * 3600, targetSec: 10 * 3600 }
     ]
   }, over || {})
 }
@@ -47,11 +47,11 @@ test("durations and clocks", () => {
 })
 
 test("money in Spanish format", () => {
-  assert.strictEqual(M.fmtMoney(1800, "€"), "1.800 €")
-  assert.strictEqual(M.fmtMoney(37.5, "€"), "37,50 €")
-  assert.strictEqual(M.fmtMoney(2880, "€", 2), "2.880,00 €")
+  assert.strictEqual(M.fmtMoney(1600, "€"), "1.600 €")
+  assert.strictEqual(M.fmtMoney(42.5, "€"), "42,50 €")
+  assert.strictEqual(M.fmtMoney(2000, "€", 2), "2.000,00 €")
   assert.strictEqual(M.fmtMoney(null, "€"), "–")
-  assert.strictEqual(M.fmtPercent(37.5), "37,5 %")
+  assert.strictEqual(M.fmtPercent(20.5), "20,5 %")
 })
 
 test("live totals add the open segment", () => {
@@ -60,9 +60,9 @@ test("live totals add the open segment", () => {
   assert.strictEqual(M.sessionWorkedSec(v, NOW), 6.5 * 3600)
   const w = M.weekLive(v, NOW)
   assert.strictEqual(w.workedSec, 7.5 * 3600)
-  assert.strictEqual(w.remainingSec, 4.5 * 3600)
-  assert.strictEqual(w.perDaySec, 2700)
-  assert.strictEqual(M.weekLine(w), "7h 30m of 12h · 4h 30m left · 6 days left · 45m a day")
+  assert.strictEqual(w.remainingSec, 2.5 * 3600)
+  assert.strictEqual(w.perDaySec, 1500)
+  assert.strictEqual(M.weekLine(w), "7h 30m of 10h · 2h 30m left · 6 days left · 25m a day")
   assert.strictEqual(M.openSec(view({ state: "paused" }), NOW, null), 0)
 })
 
@@ -74,24 +74,26 @@ test("open segment is clipped to the period start", () => {
 test("month pace and money", () => {
   const m = M.monthLive(view(), NOW)
   assert.strictEqual(m.workedSec, 21.5 * 3600)
-  assert.strictEqual(m.expectedSec, Math.round(48 * 3600 * 27 / 31))
+  assert.strictEqual(m.expectedSec, Math.round(40 * 3600 * 27 / 31))
   assert.ok(m.balanceSec < 0)
   assert.match(M.paceLine(m), /^behind /)
-  assert.strictEqual(m.money.standardValue, 2880)
-  assert.strictEqual(m.money.discount, 1080)
-  assert.strictEqual(m.money.effectiveRate, 37.5)
+  // Projected on the 40 h owed: 40 h at 50 is 2.000, the package 1.600.
+  assert.strictEqual(m.money.standardValue, 2000)
+  assert.strictEqual(m.money.discount, 400)
+  assert.strictEqual(m.money.effectiveRate, 40)
   assert.ok(m.money.projected)
-  const fig = { targetSec: 48 * 3600, standardRate: 60, billing: "package", parts: [pkg("2026-10-01", "2026-10-31", 31, 48, 1800, 0)] }
+  const fig = { targetSec: 40 * 3600, standardRate: 50, billing: "package", parts: [pkg("2026-10-01", "2026-10-31", 31, 40, 1600, 0)] }
   const over = M.money(fig, 60 * 3600)
-  assert.strictEqual(over.standardValue, 3600)
-  assert.strictEqual(over.overSec, 12 * 3600)
-  // The 12 h over are billed at the extra hour rate (the standard rate when unset).
-  assert.deepStrictEqual([over.fee, over.overageNet, over.net], [1800, 720, 2520])
-  assert.strictEqual(over.effectiveRate, 42)
+  assert.strictEqual(over.standardValue, 3000)
+  assert.strictEqual(over.overSec, 20 * 3600)
+  // The 20 h over are billed at the extra hour rate (the standard rate when unset).
+  assert.deepStrictEqual([over.fee, over.overageNet, over.net], [1600, 1000, 2600])
+  assert.strictEqual(over.effectiveRate, 43.33)
   const waived = M.money(Object.assign({}, fig, { waived: true, overageRate: 45, overageVat: 21 }), 60 * 3600)
-  assert.deepStrictEqual([waived.overageNet, waived.net, waived.gross, waived.overageWaived], [540, 1800, 2178, true])
+  assert.deepStrictEqual([waived.overageNet, waived.net, waived.gross, waived.overageWaived], [900, 1600, 1936, true])
+  // 1.600 + 20 h at 45; VAT 336 on the fee and 189 on the extra hours.
   const billed = M.money(Object.assign({}, fig, { overageRate: 45, overageVat: 21 }), 60 * 3600)
-  assert.deepStrictEqual([billed.net, billed.vat, billed.gross], [2340, 491.4, 2831.4])
+  assert.deepStrictEqual([billed.net, billed.vat, billed.gross], [2500, 525, 3025])
 })
 
 test("chart geometry and series", () => {
@@ -230,46 +232,48 @@ test("cycles match worklog.py", () => {
 })
 
 test("money: prorated package, hourly, mixed, none", () => {
-  // Spec 2.4: a 30-day cycle, 48 h / 1.800 € then 60 h / 2.250 € from day 16.
-  const parts = [pkg("2026-11-01", "2026-11-15", 15, 48, 1800, 30 * 3600, 30), pkg("2026-11-16", "2026-11-30", 15, 60, 2250, 24 * 3600, 30)]
-  const fig = { targetSec: 54 * 3600, standardRate: 60, billing: "package", parts: parts, livePart: 1 }
-  const m = M.money(fig, 54 * 3600)
-  assert.deepStrictEqual([m.net, m.vat, m.gross, m.standardValue, m.discount], [2025, 425.25, 2450.25, 3240, 1215])
+  // A 30-day cycle, 40 h / 1.600 € then 50 h / 2.100 € from day 16: 20 + 25 h
+  // owed, fees 800 + 1.050, worked exactly what is owed.
+  const parts = [pkg("2026-11-01", "2026-11-15", 15, 40, 1600, 30 * 3600, 30), pkg("2026-11-16", "2026-11-30", 15, 50, 2100, 15 * 3600, 30)]
+  const fig = { targetSec: 45 * 3600, standardRate: 50, billing: "package", parts: parts, livePart: 1 }
+  const m = M.money(fig, 45 * 3600)
+  assert.deepStrictEqual([m.net, m.vat, m.gross, m.standardValue, m.discount], [1850, 388.5, 2238.5, 2250, 400])
   const hourly = { billing: "hourly", targetSec: 0, livePart: 0,
-    parts: [{ from: "2026-10-01", to: "2026-10-31", days: 31, billing: "hourly", vatPercent: 21, standardRate: 60, fee: 0, workedSec: 9 * 3600 }] }
+    parts: [{ from: "2026-10-01", to: "2026-10-31", days: 31, billing: "hourly", vatPercent: 21, standardRate: 50, fee: 0, workedSec: 9 * 3600 }] }
   const h = M.money(hourly, 10 * 3600)  // one live hour on top
-  assert.deepStrictEqual([h.net, h.gross, h.discount], [600, 726, null])
+  assert.deepStrictEqual([h.net, h.gross, h.discount], [500, 605, null])
   const mixed = { billing: "mixed", targetSec: 24 * 3600, livePart: 1,
     parts: [parts[0], Object.assign({}, hourly.parts[0], { from: "2026-11-16", to: "2026-11-30", workedSec: 2 * 3600 })] }
   const x = M.money(mixed, 32 * 3600)
   assert.strictEqual(x.lines.length, 2)
-  assert.strictEqual(x.net, 900 + 120)
+  assert.strictEqual(x.net, 800 + 100)
   assert.strictEqual(x.discount, null)
   const none = M.money({ billing: "none", targetSec: 0, parts: [{ billing: "none", vatPercent: 0, standardRate: 0, fee: 0, workedSec: 3600 }] }, 3600)
   assert.strictEqual(none.net, 0)
 })
 
 test("month lines", () => {
-  const base = { targetSec: 48 * 3600, expectedSec: 30 * 3600, daysLeft: 5, billing: "package", currency: "€", standardRate: 60,
-    parts: [pkg("2026-10-21", "2026-11-20", 31, 48, 1800, 0)], livePart: 0 }
-  assert.strictEqual(M.monthLine(M.cycleLive(Object.assign({}, base, { workedSec: 20 * 3600 }), 0)), "20h of 48h · 28h left · 5 days left")
-  assert.strictEqual(M.monthLine(M.cycleLive(Object.assign({}, base, { workedSec: 44 * 3600, daysLeft: 0 }), 0)), "44h of 48h · 4h short")
-  assert.strictEqual(M.monthLine(M.cycleLive(Object.assign({}, base, { workedSec: 51 * 3600, daysLeft: 0 }), 0)), "51h of 48h · +3h over the package")
+  const base = { targetSec: 40 * 3600, expectedSec: 30 * 3600, daysLeft: 5, billing: "package", currency: "€", standardRate: 50,
+    parts: [pkg("2026-10-21", "2026-11-20", 31, 40, 1600, 0)], livePart: 0 }
+  assert.strictEqual(M.monthLine(M.cycleLive(Object.assign({}, base, { workedSec: 20 * 3600 }), 0)), "20h of 40h · 20h left · 5 days left")
+  assert.strictEqual(M.monthLine(M.cycleLive(Object.assign({}, base, { workedSec: 36 * 3600, daysLeft: 0 }), 0)), "36h of 40h · 4h short")
+  assert.strictEqual(M.monthLine(M.cycleLive(Object.assign({}, base, { workedSec: 43 * 3600, daysLeft: 0 }), 0)), "43h of 40h · +3h over the package")
   const hourly = { targetSec: 0, expectedSec: 0, daysLeft: 3, billing: "hourly", currency: "€", workedSec: 10 * 3600, livePart: 0,
-    parts: [{ billing: "hourly", vatPercent: 21, standardRate: 60, fee: 0, workedSec: 10 * 3600 }] }
-  assert.strictEqual(M.monthLine(M.cycleLive(hourly, 0)), "10h · 600 € at 60 €/h")
+    parts: [{ billing: "hourly", vatPercent: 21, standardRate: 50, fee: 0, workedSec: 10 * 3600 }] }
+  assert.strictEqual(M.monthLine(M.cycleLive(hourly, 0)), "10h · 500 € at 50 €/h")
   assert.strictEqual(M.weekLine({ workedSec: 3600, targetSec: 0 }), "1h this week")
 })
 
 test("money summary: one line per kind of terms", () => {
-  const base = { targetSec: 48 * 3600, expectedSec: 30 * 3600, daysLeft: 5, billing: "package", currency: "€", standardRate: 60, overageRate: 60,
-    parts: [pkg("2026-10-21", "2026-11-20", 31, 48, 1800, 0)], livePart: 0 }
-  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 20 * 3600 }), 0)), { label: "Package · 37,50 €/h", amount: "1.800 €" })
-  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 50 * 3600 }), 0)), { label: "Package + extra · 38,40 €/h", amount: "1.920 €" })
-  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 50 * 3600, waived: true }), 0)), { label: "Package · 36,00 €/h", amount: "1.800 €" })
+  const base = { targetSec: 40 * 3600, expectedSec: 30 * 3600, daysLeft: 5, billing: "package", currency: "€", standardRate: 50, overageRate: 50,
+    parts: [pkg("2026-10-21", "2026-11-20", 31, 40, 1600, 0)], livePart: 0 }
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 20 * 3600 }), 0)), { label: "Package · 40,00 €/h", amount: "1.600 €" })
+  // 10 h over at 50: 2.100 for 50 h.
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 50 * 3600 }), 0)), { label: "Package + extra · 42,00 €/h", amount: "2.100 €" })
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 50 * 3600, waived: true }), 0)), { label: "Package · 32,00 €/h", amount: "1.600 €" })
   const hourly = { targetSec: 0, expectedSec: 0, daysLeft: 3, billing: "hourly", currency: "€", workedSec: 10 * 3600, livePart: 0,
-    parts: [{ billing: "hourly", vatPercent: 21, standardRate: 60, fee: 0, workedSec: 10 * 3600 }] }
-  assert.deepStrictEqual(M.moneySummary(M.cycleLive(hourly, 0)), { label: "10h at 60 €/h", amount: "600 €" })
+    parts: [{ billing: "hourly", vatPercent: 21, standardRate: 50, fee: 0, workedSec: 10 * 3600 }] }
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(hourly, 0)), { label: "10h at 50 €/h", amount: "500 €" })
   const none = { targetSec: 0, expectedSec: 0, daysLeft: 3, billing: "none", currency: "€", workedSec: 3600, livePart: 0,
     parts: [{ billing: "none", vatPercent: 0, standardRate: 0, fee: 0, workedSec: 3600 }] }
   assert.deepStrictEqual(M.moneySummary(M.cycleLive(none, 0)), { label: "No terms for this cycle", amount: "" })
@@ -283,7 +287,7 @@ test("open segment counts only for its company", () => {
 })
 
 test("terms check", () => {
-  const ok = { from: "2026-11-16", billing: "package", monthlyHours: 60, monthlyFee: 2250, vatPercent: 21, standardRate: 60, weeklyGuideHours: 15, currency: "€" }
+  const ok = { from: "2026-11-16", billing: "package", monthlyHours: 50, monthlyFee: 2100, vatPercent: 21, standardRate: 50, weeklyGuideHours: 12, currency: "€" }
   assert.deepStrictEqual(M.checkTerms(ok), { error: "", field: "" })
   assert.strictEqual(M.checkTerms(Object.assign({}, ok, { from: "2026-02-30" })).field, "from")
   assert.strictEqual(M.checkTerms(Object.assign({}, ok, { monthlyHours: 0 })).field, "monthlyHours")
@@ -329,11 +333,11 @@ test("money rounds half up to the cent, as worklog.py cents()", () => {
 test("hourly cycle with two rates is not one rate", () => {
   const p = (from, to, rate) => ({ from: from, to: to, days: 15, billing: "hourly", vatPercent: 0, standardRate: rate, fee: 0, workedSec: 3600 })
   const fig = { billing: "hourly", targetSec: 0, expectedSec: 0, daysLeft: 0, currency: "€", workedSec: 7200, livePart: 1,
-    parts: [p("2026-11-01", "2026-11-15", 60), p("2026-11-16", "2026-11-30", 120)] }
+    parts: [p("2026-11-01", "2026-11-15", 50), p("2026-11-16", "2026-11-30", 100)] }
   const live = M.cycleLive(fig, 0)
-  assert.strictEqual(live.money.net, 180)
+  assert.strictEqual(live.money.net, 150)
   assert.strictEqual(M.uniformHourly(live.money), false)
-  assert.strictEqual(M.monthLine(live), "2h · 180 €")
+  assert.strictEqual(M.monthLine(live), "2h · 150 €")
 })
 
 // Found by the 0.3.0 review.

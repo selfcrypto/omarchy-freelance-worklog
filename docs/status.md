@@ -14,10 +14,9 @@ Budget 15 KB.
 ## Pending
 
 1. #13095: push nothing while it is open (the target commit must stay last on main); after approval `omarchy plugin update io.github.selfcrypto.worklog`, `omarchy restart shell`. This status commit stays local until then.
-2. Ask Kike: the test fixtures still use 48 h / 1.800 / 60 (`FIXTURE_TERMS`, `pkg(..., 48, 1800, ...)`), which match the real contract; neutral figures would need every expected value recomputed.
-3. Astra items left for later: segment rows and the contract form regrouped (its item 5), shared presentation components and render tests per theme and width (item 8).
-4. Not yet checked live: the reminder toast, the light theme, chart clicks with a pointer.
-5. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
+2. Astra items left for later: segment rows and the contract form regrouped (its item 5), shared presentation components and render tests per theme and width (item 8).
+3. Not yet checked live: the reminder toast, the light theme, chart clicks with a pointer.
+4. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
 
 ## Standing facts
 

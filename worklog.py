@@ -1757,7 +1757,7 @@ def fmt_duration(sec):
 
 
 def fmt_money(value, lang, currency):
-    """1.800,00 €: Spanish separators in both report languages, as the
+    """1.600,00 €: Spanish separators in both report languages, as the
     panel shows money (docs/decisions.md, 2026-10-28)."""
     whole = "{:,.2f}".format(value).replace(",", "X").replace(".", ",").replace("X", ".")
     return "%s %s" % (whole, currency)
