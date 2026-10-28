@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.selfcrypto.worklog",
   "name": "Freelance Worklog",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "author": "Kike Ferrater",
   "license": "MIT",
   "description": "Paid work hours for one or more companies: start, pause and resume, an end-of-session review with a written summary, untracked time added afterwards, contract terms per company that change from any date (monthly packages with extra hours, or hourly), billing cycles that start on any day, a month view of every day and session, the package against the standard rate, and client-ready reports (Markdown, CSV, HTML) in English or Spanish.",

@@ -5,51 +5,57 @@ One section per file: its first doc line, then each top-level symbol with its li
 
 <!-- repo-docs v3 roots=.,tests 2026-10-28 -->
 
-## KeyField.qml (343 lines)
+## KeyField.qml (431 lines)
 A text field without an editable Qt text control. It draws plain Text and
-- property text L21
-- property placeholderText L22
-- property maximumLength L23
-- property multiline L24
-- property uppercase L25
-- property allowed L27: Characters a keystroke may insert (a RegExp tested per character), or null.
-- property horizontalAlignment L28
-- property foreground L29
-- property accent L30
-- property urgent L31
-- property invalid L32
-- property radius L33
-- property padding L34
-- property font L35
-- property minHeight L38: then shows the end of the text.
-- property maxHeight L39
-- property cursorPosition L41
-- property allSelected L42
-- property editing L43
-- signal textEdited L45
-- signal editingFinished L46
-- signal accepted L47
-- signal unhandledKey L48
-- property caret L50
-- property lineHeight L51
-- property caretViewX L54: its line on many); tests check both stay in view.
-- property caretViewY L55
-- property scrolledY L57: How far the text is scrolled up inside the box (0: its first line shows).
-- function selectAll L65
-- function clean L67
-- function insert L79
-- function removeBefore L91
-- function removeAfter L105
-- property pasteLimit L115
-- property pasteProcess L116
-- property pasteBuffer L117
-- property pasteBytes L118
-- property pasteFull L119
-- function utf8Cut L123: character: { text, bytes, cut }.
-- function paste L135
-- property beforeCaret L226: The shown text up to and including the caret.
-- property wordTail L233: leaves the caret at most one line above the bottom edge.
-- property caretBottom L234
+- property text L26
+- property placeholderText L27
+- property maximumLength L28
+- property multiline L29
+- property uppercase L30
+- property allowed L32: Characters a keystroke may insert (a RegExp tested per character), or null.
+- property horizontalAlignment L33
+- property foreground L34
+- property accent L35
+- property urgent L36
+- property invalid L37
+- property radius L38
+- property padding L39
+- property font L40
+- property minHeight L43: then shows the end of the text.
+- property maxHeight L44
+- property cursorPosition L46
+- property allSelected L47
+- property editing L48
+- signal textEdited L50
+- signal editingFinished L51
+- signal accepted L52
+- signal unhandledKey L53
+- property caret L55
+- property lineHeight L56
+- property caretViewX L59: its line on many); tests check both stay in view.
+- property caretViewY L60
+- property scrolledY L62: How far the text is scrolled up inside the box (0: its first line shows).
+- function selectAll L70
+- function clean L72
+- function insert L84
+- function removeBefore L96
+- function removeAfter L110
+- property pasteLimit L120
+- property pasteProcess L121
+- property pasteBuffer L122
+- property pasteBytes L123
+- property pasteFull L124
+- function utf8Cut L128: character: { text, bytes, cut }.
+- function paste L140
+- property deadMarks L179: Dead key codes to their combining mark and their spacing form.
+- property pendingDead L183
+- function withDead L187: accent itself before a space, or both when they do not combine.
+- property beforeCaret L262: The shown text up to and including the caret.
+- property wordTail L269: leaves the caret at most one line above the bottom edge.
+- property caretBottom L270
+- function runWidth L382
+- function lineOf L384
+- function positionAt L391: The text position under (x, y), in the field's coordinates.
 
 ## Model.js (782 lines)
 Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
@@ -426,7 +432,7 @@ KeyField's paste against a clipboard of 8 MB with no newline (bin/wl-paste):
 KeyField paste cap under Quickshell: bash tests/paste/run.sh
 - fn check L13
 
-## tests/qml/tst_keyfield.qml (152 lines)
+## tests/qml/tst_keyfield.qml (201 lines)
 KeyField: typing without an editable Qt text control. Run:
 - property passed L11
 

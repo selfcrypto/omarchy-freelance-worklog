@@ -15,6 +15,11 @@ import QtQuick
 // its line (many lines) stays inside the box. Keys the field does not use (Tab, Escape,
 // Ctrl+Enter, Up/Down on one line) go out through `unhandledKey(event)`
 // first, then to the parent items if still not accepted.
+//
+// Without an input method, dead keys (´ ` ^ ¨ ~ on a Spanish keyboard) come
+// as key presses of their own; the field joins them to the next letter
+// (´ then a: á). A click puts the caret on the character under the pointer,
+// found by measuring the text, since a plain Text has no positionAt.
 Item {
   id: field
 
@@ -170,7 +175,33 @@ Item {
 
   // ---------------------------------------------------------------- keys
 
+  // Dead key codes to their combining mark and their spacing form.
+  readonly property var deadMarks: ({
+    16781904: ["\u0300", "`"], 16781905: ["\u0301", "´"], 16781906: ["\u0302", "^"], 16781907: ["\u0303", "~"],
+    16781908: ["\u0304", "¯"], 16781909: ["\u0306", "˘"], 16781910: ["\u0307", "˙"], 16781911: ["\u0308", "¨"],
+    16781912: ["\u030a", "˚"], 16781913: ["\u030b", "˝"], 16781914: ["\u030c", "ˇ"], 16781915: ["\u0327", "¸"] })
+  property int pendingDead: 0
+
+  // Typed text with a pending dead key joined to it: the accented letter, the
+  // accent itself before a space, or both when they do not combine.
+  function withDead(t) {
+    var d = deadMarks[pendingDead]
+    pendingDead = 0
+    if (!d) return t
+    if (t === " ") return d[1]
+    var joined = (t + d[0]).normalize("NFC")
+    return joined.length === t.length ? joined : d[1] + t
+  }
+
   Keys.onPressed: function(event) {
+    if (deadMarks[event.key] !== undefined) {
+      // A second dead key types the first one's accent.
+      var before = pendingDead ? deadMarks[pendingDead][1] : ""
+      pendingDead = event.key
+      if (before && insert(before)) field.textEdited()
+      event.accepted = true
+      return
+    }
     var ctrl = (event.modifiers & Qt.ControlModifier) !== 0
     var shift = (event.modifiers & Qt.ShiftModifier) !== 0
     var key = event.key
@@ -184,6 +215,11 @@ Item {
     }
     var changed = false
     event.accepted = true
+    // Anything but a letter drops a pending dead key; modifiers (Shift for a
+    // capital, AltGr) keep it.
+    var modifierKey = key === Qt.Key_Shift || key === Qt.Key_Control || key === Qt.Key_Alt || key === Qt.Key_AltGr
+      || key === Qt.Key_Meta || key === Qt.Key_Super_L || key === Qt.Key_Super_R || key === Qt.Key_CapsLock
+    if (pendingDead && !modifierKey && !(event.text.length > 0 && event.text.charCodeAt(0) >= 32)) pendingDead = 0
     if ((ctrl && key === Qt.Key_V) || (shift && key === Qt.Key_Insert)) { paste(); return }
     if (ctrl && key === Qt.Key_A) { selectAll(); return }
     if (key === Qt.Key_Backspace) changed = removeBefore(ctrl)
@@ -197,7 +233,7 @@ Item {
       else { field.accepted(); field.editingFinished() }
     } else if (event.text.length > 0 && !ctrl && (event.modifiers & (Qt.AltModifier | Qt.MetaModifier)) === 0
                && event.text.charCodeAt(0) >= 32 && event.text.charCodeAt(0) !== 127) {
-      changed = insert(event.text)
+      changed = insert(withDead(event.text))
     } else {
       event.accepted = false
       field.unhandledKey(event)
@@ -330,13 +366,65 @@ Item {
     }
   }
 
+  // Hit testing for clicks: the width of a run of text, and the line a
+  // position falls on (the text up to it and the rest of its word, wrapped
+  // as shown; word wrap moves whole words).
+  TextMetrics { id: hitMetrics; font: field.font }
+  Text {
+    id: hitProbe
+    visible: false
+    width: viewport.width
+    textFormat: Text.PlainText
+    wrapMode: Text.Wrap
+    font: field.font
+  }
+
+  function runWidth(s) { hitMetrics.text = s; return hitMetrics.advanceWidth }
+
+  function lineOf(s, p) {
+    hitProbe.text = s.slice(0, p + 1) + (s.slice(p + 1).match(/^\S*/) || [""])[0]
+    hitProbe.forceLayout()
+    return Math.max(0, hitProbe.lineCount - 1)
+  }
+
+  // The text position under (x, y), in the field's coordinates.
+  function positionAt(x, y) {
+    var s = label.shown
+    var lx = x - viewport.x - label.x
+    var start = 0, end = s.length
+    if (multiline && s.length > 0) {
+      var lineH = label.lineCount > 0 ? label.height / label.lineCount : lineHeight
+      var want = Math.max(0, Math.min(label.lineCount - 1, Math.floor((y - viewport.y - label.y) / lineH)))
+      var lo = 0, hi = s.length, mid
+      while (lo < hi) { mid = (lo + hi) >> 1; if (lineOf(s, mid) < want) lo = mid + 1; else hi = mid }
+      start = lo
+      hi = s.length
+      while (lo < hi) { mid = (lo + hi) >> 1; if (lineOf(s, mid) <= want) lo = mid + 1; else hi = mid }
+      end = lo
+      // A line ending in a space or a newline: the caret goes before it.
+      if (end > start && end < s.length && /\s/.test(s.charAt(end - 1))) end--
+    }
+    // The character under the click: the first whose right edge is past it.
+    // The caret goes before it, or after it when the click is past its middle.
+    var a = start, b = end
+    while (a < b) { var m = (a + b) >> 1; if (runWidth(s.slice(start, m + 1)) < lx) a = m + 1; else b = m }
+    var p = a
+    if (p < end && lx > (runWidth(s.slice(start, p)) + runWidth(s.slice(start, p + 1))) / 2) p++
+    // Back from the shown text (with the caret in it) to the field's text.
+    var caretAt = activeFocus && !allSelected ? cursorPosition : -1
+    if (caretAt >= 0 && p > caretAt) p = Math.max(caretAt, p - caret.length)
+    return Math.max(0, Math.min(text.length, p))
+  }
+
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.IBeamCursor
-    onClicked: {
+    onClicked: function(mouse) {
+      var p = field.positionAt(mouse.x, mouse.y)
       field.forceActiveFocus()
       field.allSelected = false
-      field.cursorPosition = field.text.length
+      field.pendingDead = 0
+      field.cursorPosition = p
     }
     onDoubleClicked: { field.forceActiveFocus(); field.selectAll() }
   }

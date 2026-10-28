@@ -5,7 +5,7 @@ import "../.."
 // KeyField: typing without an editable Qt text control. Run:
 // QT_QPA_PLATFORM=offscreen qmltestrunner -input tests/qml/tst_keyfield.qml
 Item {
-  width: 300
+  width: 440
   height: 320
 
   property var passed: []
@@ -22,6 +22,10 @@ Item {
   KeyField { id: longLine; y: 200; width: 80 }
   KeyField { id: longArea; y: 240; width: 120; multiline: true; maxHeight: 60 }
   KeyField { id: longWord; y: 240; x: 150; width: 120; multiline: true; maxHeight: 60 }
+  KeyField { id: clickLine; y: 0; x: 220; width: 200 }
+  KeyField { id: accents; y: 160; x: 220; width: 200 }
+  KeyField { id: clickArea; y: 40; x: 220; width: 200; multiline: true; minHeight: 80 }
+  TextMetrics { id: tm; font: clickLine.font }
 
   SignalSpy { id: accepted; target: line; signalName: "accepted" }
   SignalSpy { id: edited; target: line; signalName: "textEdited" }
@@ -117,6 +121,51 @@ Item {
       wait(0)
       compare(longLine.text.charAt(0), "x")
       verify(longLine.caretViewX > 0 && longLine.caretViewX <= longLine.width, "typed: " + longLine.caretViewX)
+    }
+
+    // Dead keys (´ ` ^ ¨ ~) join the next letter, as a Spanish keyboard types.
+    function test_dead_keys_compose() {
+      accents.forceActiveFocus()
+      keyClick(Qt.Key_Dead_Acute); keyClick(Qt.Key_A)
+      // A capital: Shift goes down between the dead key and the letter.
+      keyPress(Qt.Key_Dead_Acute); keyRelease(Qt.Key_Dead_Acute)
+      keyPress(Qt.Key_Shift); keyClick("E", Qt.ShiftModifier); keyRelease(Qt.Key_Shift)
+      keyClick(Qt.Key_Dead_Diaeresis); keyClick(Qt.Key_U)
+      keyClick(Qt.Key_Dead_Acute); keyClick(Qt.Key_Space)
+      keyClick(Qt.Key_Dead_Acute); keyClick(Qt.Key_X)
+      keyClick(Qt.Key_Dead_Grave); keyClick(Qt.Key_Dead_Grave); keyClick(Qt.Key_O)
+      compare(accents.text, "\u00e1\u00c9\u00fc\u00b4\u00b4x`\u00f2")
+    }
+
+    // A click puts the caret where it lands, on one line and on many.
+    function test_click_places_the_caret() {
+      clickLine.text = "hello world"
+      tm.text = "hello"
+      mouseClick(clickLine, clickLine.padding + tm.advanceWidth + 1, clickLine.height / 2)
+      compare(clickLine.cursorPosition, 5)
+      mouseClick(clickLine, 2, clickLine.height / 2)
+      compare(clickLine.cursorPosition, 0)
+      mouseClick(clickLine, clickLine.width - 2, clickLine.height / 2)
+      compare(clickLine.cursorPosition, 11)
+      // Focused now: the caret glyph is in the shown text; a click before it
+      // and one after it both land on the characters under them.
+      tm.text = "he"
+      mouseClick(clickLine, clickLine.padding + tm.advanceWidth + 1, clickLine.height / 2)
+      compare(clickLine.cursorPosition, 2)
+      tm.text = "he\u258fllo w"
+      mouseClick(clickLine, clickLine.padding + tm.advanceWidth + 1, clickLine.height / 2)
+      compare(clickLine.cursorPosition, 7)
+
+      clickArea.text = "first line\nsecond line\nthird"
+      var lineH = clickArea.lineHeight
+      mouseClick(clickArea, clickArea.padding + 1, clickArea.padding + lineH * 1.5)
+      compare(clickArea.cursorPosition, 11)
+      // The caret glyph now starts line 2 and shifts what follows it.
+      tm.text = "\u258fseco"
+      mouseClick(clickArea, clickArea.padding + tm.advanceWidth + 1, clickArea.padding + lineH * 1.5)
+      compare(clickArea.cursorPosition, 15)
+      mouseClick(clickArea, clickArea.width - clickArea.padding - 2, clickArea.padding + lineH * 0.5)
+      compare(clickArea.cursorPosition, 10)
     }
 
     // A word longer than the box (a URL) is broken over lines: with the caret

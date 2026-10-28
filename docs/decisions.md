@@ -170,3 +170,8 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 ## 2026-10-28 · The pace line names the cycle
 **Decision.** The track page's pace row reads "Cycle: 2h 18m behind pace, 37h 54m left in 23 days" over "Week guide: 10h 06m of 12h, 1h 54m to go"; `paceLine` says "behind pace" / "ahead of pace" everywhere; the meter's tooltip says the tick is the owed hours spread over the cycle's days. Replaces the bare "behind 2h 18m" of the entry "Cycle and week lines name their scope".
 **Why.** Kike read "behind 2h 18m" as the shortfall against the 12 h week, next to the week guide's "1h 54m to go"; both numbers were near each other and only one said what it measured.
+
+## 2026-10-28 · KeyField: dead keys and clicks
+**Decision.** KeyField joins a dead key (´ ` ^ ¨ ~ and the rest, `deadMarks`) to the next letter with Unicode composition (´ then a: á, ´ then Shift+E: É; ´ then space: ´; ´ then x: ´x); modifier keys keep a pending dead key. A click places the caret on the character under the pointer (`positionAt`): the line by binary search over where positions wrap (the text up to a position and the rest of its word, as word wrap lays it), then the character by measured widths; the caret glyph in the shown text is accounted for.
+**Why.** Kike: accents could not be typed in the summary and a click always sent the caret to the end. Without an editable Qt text control there is no input method, so dead keys arrive as key presses of their own, and a plain Text has no positionAt.
+**Alternative rejected.** An input method or a Qt text control: the marketplace review blocks editable Qt text controls.

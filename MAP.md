@@ -63,6 +63,6 @@ v1 terms under `legacy`). The shell sends the whole list as JSON on stdin (`work
 | `tests/test_worklog.py` | Lifecycle, recovery, midnight/DST, week/month/money, validation, overlaps, history, backups, corrupt or malformed files, concurrency, exports clipped to the period |
 | `tests/test_companies.py` | v1 migration, cycles (anchor days, short months), terms in force, mid-cycle proration, past cycles unchanged by new terms, hourly and mixed, company scoping, archive rules, validation, extra hours billed or waived, reports (MD, CSV, HTML, es) |
 | `tests/model.test.js` | Formatting, live totals, pace and money (prorated, hourly, mixed, extra hours), cycles (same cases as the helper), month page series, terms check, chart series, clock parsing, editor rows |
-| `tests/qml/tst_timefield.qml`, `tests/qml/tst_keyfield.qml` | Typing over a time keeps what is typed; KeyField typing, editing, limits, keys passed on, caret kept in view |
+| `tests/qml/tst_timefield.qml`, `tests/qml/tst_keyfield.qml` | Typing over a time keeps what is typed; KeyField typing, editing, limits, keys passed on, caret kept in view, dead keys, clicks placing the caret |
 | `tests/render/` | `run.sh` renders SessionEditor and WeekChart under `qs` (the shell's Commons and Ui linked in) at 280 and 400 px, dark and light, with long text; fails on anything past the edges, saves PNGs |
 | `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` (`bin/`): the copy stops early, 4096 bytes of UTF-8 kept |
