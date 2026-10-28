@@ -6,7 +6,7 @@
 cd ~/Work/omarchy-freelance-worklog
 python3 -m unittest discover -s tests      # helper, 82 tests, ~20 s
 node --test tests/                         # Model.js, 30 tests (sets TZ=Europe/Madrid itself)
-QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 18 tests
+QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 20 tests
 bash tests/paste/run.sh                    # KeyField paste: copy stopped early, 4096 bytes of UTF-8 kept (fake 8 MB clipboard, runs qs)
 bash tests/render/run.sh [png dir]         # session form and chart at 280/400 px, dark and light: nothing spills (runs qs)
 ```

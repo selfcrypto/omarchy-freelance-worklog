@@ -5,7 +5,7 @@ One section per file: its first doc line, then each top-level symbol with its li
 
 <!-- repo-docs v3 roots=.,tests 2026-10-28 -->
 
-## KeyField.qml (431 lines)
+## KeyField.qml (425 lines)
 A text field without an editable Qt text control. It draws plain Text and
 - property text L26
 - property placeholderText L27
@@ -30,32 +30,33 @@ A text field without an editable Qt text control. It draws plain Text and
 - signal editingFinished L51
 - signal accepted L52
 - signal unhandledKey L53
-- property caret L55
-- property lineHeight L56
-- property caretViewX L59: its line on many); tests check both stay in view.
+- property lineHeight L55
+- property caretWidth L56
+- property caretViewX L59: bottom of its line (y); tests check both stay in view.
 - property caretViewY L60
 - property scrolledY L62: How far the text is scrolled up inside the box (0: its first line shows).
-- function selectAll L70
-- function clean L72
-- function insert L84
-- function removeBefore L96
-- function removeAfter L110
-- property pasteLimit L120
-- property pasteProcess L121
-- property pasteBuffer L122
-- property pasteBytes L123
-- property pasteFull L124
-- function utf8Cut L128: character: { text, bytes, cut }.
-- function paste L140
-- property deadMarks L179: Dead key codes to their combining mark and their spacing form.
-- property pendingDead L183
-- function withDead L187: accent itself before a space, or both when they do not combine.
-- property beforeCaret L262: The shown text up to and including the caret.
-- property wordTail L269: leaves the caret at most one line above the bottom edge.
-- property caretBottom L270
-- function runWidth L382
-- function lineOf L384
-- function positionAt L391: The text position under (x, y), in the field's coordinates.
+- property contentWidth L64: The width of the shown text; the caret never adds to it.
+- function selectAll L72
+- function clean L74
+- function insert L86
+- function removeBefore L98
+- function removeAfter L112
+- property pasteLimit L122
+- property pasteProcess L123
+- property pasteBuffer L124
+- property pasteBytes L125
+- property pasteFull L126
+- function utf8Cut L130: character: { text, bytes, cut }.
+- function paste L142
+- property deadMarks L181: Dead key codes to their combining mark and their spacing form.
+- property pendingDead L185
+- function withDead L189: accent itself before a space, or both when they do not combine.
+- function wrapLines L262: Spaces at a wrap stay on the line they end.
+- property lines L292
+- property lineStep L298: The distance between lines as the label draws them.
+- property caretLine L301: The caret's line (at a wrap, the start of the next line) and its x on it.
+- property caretX L307
+- function positionAt L314: The text position under (x, y), in the field's coordinates.
 
 ## Model.js (782 lines)
 Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
@@ -432,7 +433,7 @@ KeyField's paste against a clipboard of 8 MB with no newline (bin/wl-paste):
 KeyField paste cap under Quickshell: bash tests/paste/run.sh
 - fn check L13
 
-## tests/qml/tst_keyfield.qml (201 lines)
+## tests/qml/tst_keyfield.qml (232 lines)
 KeyField: typing without an editable Qt text control. Run:
 - property passed L11
 

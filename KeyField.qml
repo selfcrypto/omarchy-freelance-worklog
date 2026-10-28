@@ -9,17 +9,17 @@ import QtQuick
 // Wayland receive loop; another clipboard owner could stall the shell. The
 // marketplace review blocks such controls (Power Saving 1.4.4, OmaCal 1.1.0).
 //
-// The caret is a character drawn into the text while the field has focus
-// (no layout queries on a Text). The view follows it: the text before the
-// caret is measured, and the field scrolls so the caret's end (one line) or
-// its line (many lines) stays inside the box. Keys the field does not use (Tab, Escape,
-// Ctrl+Enter, Up/Down on one line) go out through `unhandledKey(event)`
-// first, then to the parent items if still not accepted.
+// The field lays its text out itself (`wrapLines`: word wrap measured with
+// FontMetrics, a word wider than the box broken anywhere), so it knows where
+// every character is: the caret is a bar drawn over the text at its measured
+// place, a click finds the character under it, and the view scrolls to keep
+// the caret in the box. A plain Text has no positionAt to ask. Keys the field
+// does not use (Tab, Escape, Ctrl+Enter, Up/Down on one line) go out through
+// `unhandledKey(event)` first, then to the parent items if still not accepted.
 //
 // Without an input method, dead keys (´ ` ^ ¨ ~ on a Spanish keyboard) come
 // as key presses of their own; the field joins them to the next letter
-// (´ then a: á). A click puts the caret on the character under the pointer,
-// found by measuring the text, since a plain Text has no positionAt.
+// (´ then a: á).
 Item {
   id: field
 
@@ -52,14 +52,16 @@ Item {
   signal accepted()
   signal unhandledKey(var event)
 
-  readonly property string caret: "▏"
-  readonly property real lineHeight: Math.ceil(metrics.height)
-  // Where the caret ends inside the visible box (x on one line, the bottom of
-  // its line on many); tests check both stay in view.
-  readonly property real caretViewX: label.x + caretMetrics.advanceWidth
-  readonly property real caretViewY: label.y + caretBottom
+  readonly property real lineHeight: Math.ceil(fm.height)
+  readonly property real caretWidth: 2
+  // Where the caret is inside the visible box: its right edge (x) and the
+  // bottom of its line (y); tests check both stay in view.
+  readonly property real caretViewX: label.x + caretX + caretWidth
+  readonly property real caretViewY: label.y + (caretLine + 1) * lineStep
   // How far the text is scrolled up inside the box (0: its first line shows).
   readonly property real scrolledY: -label.y
+  // The width of the shown text; the caret never adds to it.
+  readonly property real contentWidth: label.implicitWidth
 
   activeFocusOnTab: true
   implicitWidth: 160
@@ -250,32 +252,82 @@ Item {
   }
   onTextChanged: if (cursorPosition > text.length) cursorPosition = text.length
 
+  // ---------------------------------------------------------------- layout
+
+  FontMetrics { id: fm; font: field.font }
+
+  // The lines the text is shown in, as { start, end, soft } ranges of `text`
+  // (end exclusive; `soft`: the line was wrapped, not ended by a newline).
+  // Spaces at a wrap stay on the line they end.
+  function wrapLines(s, maxW) {
+    var out = []
+    var at = 0
+    while (true) {
+      var nl = s.indexOf("\n", at)
+      var stop = nl < 0 ? s.length : nl
+      var start = at
+      do {
+        var end = stop
+        if (fm.advanceWidth(s.slice(start, stop)) > maxW) {
+          // The longest run from `start` that fits, at least one character.
+          var lo = start + 1, hi = stop, fit = start + 1
+          while (lo <= hi) { var mid = (lo + hi) >> 1; if (fm.advanceWidth(s.slice(start, mid)) <= maxW) { fit = mid; lo = mid + 1 } else hi = mid - 1 }
+          // Back to the last space in it; a word wider than the box is cut.
+          end = fit
+          if (s.charAt(fit) !== " ") {
+            var space = s.lastIndexOf(" ", fit - 1)
+            if (space > start) end = space + 1
+          }
+          while (end < stop && s.charAt(end) === " ") end++
+        }
+        out.push({ start: start, end: end, soft: end < stop })
+        start = end
+      } while (start < stop)
+      if (nl < 0) break
+      at = nl + 1
+    }
+    return out
+  }
+
+  readonly property var lines: {
+    field.font
+    return multiline ? wrapLines(text, Math.max(fm.maximumCharacterWidth, viewport.width - caretWidth))
+      : [{ start: 0, end: text.length, soft: false }]
+  }
+  // The distance between lines as the label draws them.
+  readonly property real lineStep: lines.length > 0 && label.implicitHeight > 0 ? label.implicitHeight / lines.length : lineHeight
+
+  // The caret's line (at a wrap, the start of the next line) and its x on it.
+  readonly property int caretLine: {
+    var c = Math.min(cursorPosition, text.length)
+    var i = 0
+    while (i + 1 < lines.length && lines[i + 1].start <= c) i++
+    return i
+  }
+  readonly property real caretX: {
+    field.font
+    var l = lines[caretLine]
+    return l ? fm.advanceWidth(text.slice(l.start, Math.min(cursorPosition, text.length))) : 0
+  }
+
+  // The text position under (x, y), in the field's coordinates.
+  function positionAt(x, y) {
+    if (lines.length === 0) return 0
+    var i = Math.max(0, Math.min(lines.length - 1, Math.floor((y - viewport.y - label.y) / lineStep)))
+    var l = lines[i]
+    var lx = x - viewport.x - label.x
+    // A wrapped line's last place is before its trailing space: after it is
+    // the next line's start.
+    var last = l.soft && l.end > l.start && text.charAt(l.end - 1) === " " ? l.end - 1 : l.end
+    // The character under the click: the first whose right edge is past it.
+    // The caret goes before it, or after it when the click is past its middle.
+    var a = l.start, b = last
+    while (a < b) { var m = (a + b) >> 1; if (fm.advanceWidth(text.slice(l.start, m + 1)) < lx) a = m + 1; else b = m }
+    if (a < last && lx > (fm.advanceWidth(text.slice(l.start, a)) + fm.advanceWidth(text.slice(l.start, a + 1))) / 2) a++
+    return Math.max(0, Math.min(text.length, a))
+  }
+
   // ---------------------------------------------------------------- look
-
-  TextMetrics {
-    id: metrics
-    font: field.font
-    text: "Hg"
-  }
-
-  // The shown text up to and including the caret.
-  readonly property string beforeCaret: label.shown.slice(0, field.activeFocus && !field.allSelected ? field.cursorPosition + caret.length : field.cursorPosition)
-  // Many lines: the rest of the caret's word. Laid out up to the end of that
-  // word, the text wraps exactly as the shown text does; the caret's line ends
-  // no lower than that, and at most one line below the text up to the caret
-  // (its piece of the word may not fit on that line). The lower of the two
-  // bounds is kept in view, so a word broken over several lines (a URL)
-  // leaves the caret at most one line above the bottom edge.
-  readonly property string wordTail: multiline ? (label.shown.slice(beforeCaret.length).match(/^\S*/) || [""])[0] : ""
-  readonly property real caretBottom: Math.min(caretWordProbe.height,
-    caretProbe.height + (caretProbe.lineCount > 0 ? caretProbe.height / caretProbe.lineCount : lineHeight))
-
-  TextMetrics {
-    id: caretMetrics
-    font: field.font
-    text: field.multiline ? "" : field.beforeCaret
-  }
-
 
   Rectangle {
     id: frame
@@ -302,7 +354,7 @@ Item {
     Rectangle {
       visible: field.allSelected
       x: label.x
-      y: label.y + (field.multiline ? 0 : 0)
+      y: label.y
       width: Math.min(viewport.width, label.implicitWidth)
       height: field.multiline ? label.height : parent.height
       color: Qt.rgba(field.accent.r, field.accent.g, field.accent.b, 0.3)
@@ -311,51 +363,44 @@ Item {
 
     Text {
       id: label
-      readonly property string shown: field.activeFocus && !field.allSelected
-        ? field.text.slice(0, field.cursorPosition) + field.caret + field.text.slice(field.cursorPosition)
-        : field.text
-      width: field.multiline ? viewport.width : implicitWidth
+      width: implicitWidth
       // One line: long text scrolls so the caret stays in view.
       x: field.multiline ? 0
-        : (implicitWidth > viewport.width ? (field.activeFocus ? Math.min(0, Math.max(viewport.width - implicitWidth, viewport.width - caretMetrics.advanceWidth)) : 0)
+        : (implicitWidth + field.caretWidth > viewport.width
+          ? (field.activeFocus ? Math.min(0, Math.max(viewport.width - implicitWidth - field.caretWidth, viewport.width - field.caretX - field.caretWidth)) : 0)
           : (field.horizontalAlignment === Text.AlignHCenter ? (viewport.width - implicitWidth) / 2
-            : (field.horizontalAlignment === Text.AlignRight ? viewport.width - implicitWidth : 0)))
+            : (field.horizontalAlignment === Text.AlignRight ? viewport.width - implicitWidth - field.caretWidth : 0)))
       // Many lines: the caret's line stays in view (the end while unfocused).
       y: field.multiline
-        ? (field.activeFocus ? Math.min(0, Math.max(viewport.height - height, viewport.height - field.caretBottom)) : Math.min(0, viewport.height - height))
+        ? (field.activeFocus ? Math.min(0, Math.max(viewport.height - height, viewport.height - (field.caretLine + 1) * field.lineStep))
+          : Math.min(0, viewport.height - height))
         : (viewport.height - height) / 2
-      text: shown
+      // The laid-out lines; a wrap becomes a line break here.
+      text: {
+        var out = []
+        for (var i = 0; i < field.lines.length; i++) out.push(field.text.slice(field.lines[i].start, field.lines[i].end))
+        return out.join("\n")
+      }
       textFormat: Text.PlainText
-      wrapMode: field.multiline ? Text.Wrap : Text.NoWrap
+      wrapMode: Text.NoWrap
       color: field.foreground
       font: field.font
     }
 
-    // Many lines: the text up to the caret, and up to the end of its word,
-    // wrapped as the shown text is (see `caretBottom`).
-    Text {
-      id: caretProbe
-      visible: false
-      width: viewport.width
-      text: field.multiline ? field.beforeCaret : ""
-      textFormat: Text.PlainText
-      wrapMode: Text.Wrap
-      font: field.font
-    }
-    Text {
-      id: caretWordProbe
-      visible: false
-      width: viewport.width
-      text: field.multiline ? field.beforeCaret + field.wordTail : ""
-      textFormat: Text.PlainText
-      wrapMode: Text.Wrap
-      font: field.font
+    // The caret: a bar over the text, so the text never moves for it.
+    Rectangle {
+      visible: field.activeFocus && !field.allSelected
+      x: label.x + field.caretX
+      y: label.y + field.caretLine * field.lineStep + (field.lineStep - height) / 2
+      width: field.caretWidth
+      height: Math.min(field.lineStep, field.lineHeight)
+      color: field.foreground
     }
 
     Text {
       visible: field.text === "" && !field.activeFocus
       anchors.verticalCenter: field.multiline ? undefined : parent.verticalCenter
-      y: field.multiline ? 0 : undefined
+      y: 0
       width: parent.width
       horizontalAlignment: field.horizontalAlignment
       text: field.placeholderText
@@ -366,65 +411,14 @@ Item {
     }
   }
 
-  // Hit testing for clicks: the width of a run of text, and the line a
-  // position falls on (the text up to it and the rest of its word, wrapped
-  // as shown; word wrap moves whole words).
-  TextMetrics { id: hitMetrics; font: field.font }
-  Text {
-    id: hitProbe
-    visible: false
-    width: viewport.width
-    textFormat: Text.PlainText
-    wrapMode: Text.Wrap
-    font: field.font
-  }
-
-  function runWidth(s) { hitMetrics.text = s; return hitMetrics.advanceWidth }
-
-  function lineOf(s, p) {
-    hitProbe.text = s.slice(0, p + 1) + (s.slice(p + 1).match(/^\S*/) || [""])[0]
-    hitProbe.forceLayout()
-    return Math.max(0, hitProbe.lineCount - 1)
-  }
-
-  // The text position under (x, y), in the field's coordinates.
-  function positionAt(x, y) {
-    var s = label.shown
-    var lx = x - viewport.x - label.x
-    var start = 0, end = s.length
-    if (multiline && s.length > 0) {
-      var lineH = label.lineCount > 0 ? label.height / label.lineCount : lineHeight
-      var want = Math.max(0, Math.min(label.lineCount - 1, Math.floor((y - viewport.y - label.y) / lineH)))
-      var lo = 0, hi = s.length, mid
-      while (lo < hi) { mid = (lo + hi) >> 1; if (lineOf(s, mid) < want) lo = mid + 1; else hi = mid }
-      start = lo
-      hi = s.length
-      while (lo < hi) { mid = (lo + hi) >> 1; if (lineOf(s, mid) <= want) lo = mid + 1; else hi = mid }
-      end = lo
-      // A line ending in a space or a newline: the caret goes before it.
-      if (end > start && end < s.length && /\s/.test(s.charAt(end - 1))) end--
-    }
-    // The character under the click: the first whose right edge is past it.
-    // The caret goes before it, or after it when the click is past its middle.
-    var a = start, b = end
-    while (a < b) { var m = (a + b) >> 1; if (runWidth(s.slice(start, m + 1)) < lx) a = m + 1; else b = m }
-    var p = a
-    if (p < end && lx > (runWidth(s.slice(start, p)) + runWidth(s.slice(start, p + 1))) / 2) p++
-    // Back from the shown text (with the caret in it) to the field's text.
-    var caretAt = activeFocus && !allSelected ? cursorPosition : -1
-    if (caretAt >= 0 && p > caretAt) p = Math.max(caretAt, p - caret.length)
-    return Math.max(0, Math.min(text.length, p))
-  }
-
   MouseArea {
     anchors.fill: parent
     cursorShape: Qt.IBeamCursor
     onClicked: function(mouse) {
-      var p = field.positionAt(mouse.x, mouse.y)
       field.forceActiveFocus()
       field.allSelected = false
       field.pendingDead = 0
-      field.cursorPosition = p
+      field.cursorPosition = field.positionAt(mouse.x, mouse.y)
     }
     onDoubleClicked: { field.forceActiveFocus(); field.selectAll() }
   }

@@ -147,12 +147,12 @@ Item {
       compare(clickLine.cursorPosition, 0)
       mouseClick(clickLine, clickLine.width - 2, clickLine.height / 2)
       compare(clickLine.cursorPosition, 11)
-      // Focused now: the caret glyph is in the shown text; a click before it
-      // and one after it both land on the characters under them.
+      // Focused now, with the caret at the end: clicks still land on the
+      // characters under them.
       tm.text = "he"
       mouseClick(clickLine, clickLine.padding + tm.advanceWidth + 1, clickLine.height / 2)
       compare(clickLine.cursorPosition, 2)
-      tm.text = "he\u258fllo w"
+      tm.text = "hello w"
       mouseClick(clickLine, clickLine.padding + tm.advanceWidth + 1, clickLine.height / 2)
       compare(clickLine.cursorPosition, 7)
 
@@ -160,12 +160,43 @@ Item {
       var lineH = clickArea.lineHeight
       mouseClick(clickArea, clickArea.padding + 1, clickArea.padding + lineH * 1.5)
       compare(clickArea.cursorPosition, 11)
-      // The caret glyph now starts line 2 and shifts what follows it.
-      tm.text = "\u258fseco"
+      tm.text = "seco"
       mouseClick(clickArea, clickArea.padding + tm.advanceWidth + 1, clickArea.padding + lineH * 1.5)
       compare(clickArea.cursorPosition, 15)
       mouseClick(clickArea, clickArea.width - clickArea.padding - 2, clickArea.padding + lineH * 0.5)
       compare(clickArea.cursorPosition, 10)
+    }
+
+    // Every caret position in a long text with a URL: the caret is in the box,
+    // and a click where it is drawn lands on the same position.
+    function test_every_position_round_trips() {
+      clickArea.text = "Reviewed https://example.com/a/very/long/path/that/never/fits?with=query and the state-machine,\nthen notes."
+      clickArea.forceActiveFocus()
+      var bad = ""
+      for (var p = 0; p <= clickArea.text.length && bad === ""; p++) {
+        clickArea.cursorPosition = p
+        wait(0)
+        if (clickArea.caretViewY > clickArea.height - clickArea.padding + 1 || clickArea.caretViewY - clickArea.lineStep < -1)
+          bad = "out of view at " + p + ": " + clickArea.caretViewY
+        var x = clickArea.padding + clickArea.caretViewX - clickArea.caretWidth
+        var y = clickArea.padding + clickArea.caretViewY - clickArea.lineStep / 2
+        if (bad === "" && clickArea.positionAt(x, y) !== p) bad = "click at " + p + " gave " + clickArea.positionAt(x, y)
+      }
+      compare(bad, "")
+    }
+
+    // The caret is drawn over the text: placing it inside a word adds no space.
+    function test_the_caret_takes_no_room() {
+      clickLine.text = "Auditoria"
+      clickLine.focus = false
+      wait(0)
+      var unfocused = clickLine.contentWidth
+      clickLine.forceActiveFocus()
+      clickLine.cursorPosition = 6
+      wait(0)
+      compare(clickLine.contentWidth, unfocused)
+      keyClick(Qt.Key_X)
+      compare(clickLine.text, "Auditoxria")
     }
 
     // A word longer than the box (a URL) is broken over lines: with the caret

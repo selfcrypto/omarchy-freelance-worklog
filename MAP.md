@@ -29,7 +29,7 @@
 | `Panel.qml` | Bar pill and the panel: track, away, review, editor, history, month and companies pages; `MoneyBlock`, `CompanyChips` |
 | `SessionEditor.qml` | Summary, tags, segment rows with live totals; review, edit and new modes |
 | `TimeField.qml` | HH:MM field whose text is not bound to its minutes, so typing is never rewritten |
-| `KeyField.qml` | Text field without an editable Qt text control: plain Text, keys one by one, paste on Ctrl+V capped at 4096 bytes |
+| `KeyField.qml` | Text field without an editable Qt text control: plain Text with its own line layout (`wrapLines`), a caret bar, clicks by measured widths, dead keys, paste on Ctrl+V capped at 4096 bytes |
 | `WeekChart.qml` | Column chart of Rectangles with an optional dashed target line and dashed markers |
 | `Model.js` | Pure helpers shared by the QML |
 | `worklog.py` | Data helper: storage, lifecycle, aggregation, exports |

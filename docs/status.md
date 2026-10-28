@@ -7,14 +7,14 @@ Budget 15 KB.
 
 | Thing | State |
 |---|---|
-| Version | 0.3.4 on `main`, tag v0.3.4, `[Verify]` #13095 retargeted to it (0.3.0 to 0.3.3 were never approved) |
-| Tests | 82 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 30 Model.js, 18 QML (KeyField, TimeField), paste cap (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
+| Version | 0.3.5 on `main`, tag v0.3.5, `[Verify]` #13095 retargeted to it (0.3.0 to 0.3.4 were never approved) |
+| Tests | 82 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 30 Model.js, 20 QML (KeyField, TimeField), paste cap (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
 | Review | Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
 
 1. #13095: push nothing while it is open (the target commit must stay last on main); after approval `omarchy plugin update io.github.selfcrypto.worklog`, `omarchy restart shell`.
-2. Not yet checked live: dead keys on a real keyboard (only synthetic key events tested); the reminder toast, the light theme, chart clicks with a pointer.
+2. Not yet checked live: the reminder toast, the light theme, chart clicks with a pointer.
 3. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
 
 ## Standing facts
@@ -25,6 +25,7 @@ Budget 15 KB.
 
 ## Done
 
+- **2026-10-28.** 0.3.5: text fields draw the caret as a bar over the text (it used to be a character that pushed the text apart) and lay out their lines themselves.
 - **2026-10-28.** 0.3.4: text fields take accents typed with dead keys (´ then a: á) and place the caret where clicked.
 - **2026-10-28.** 0.3.3: the pace line starts with "Cycle:" and says "behind pace", matching "Week guide:" under it.
 - **2026-10-28.** 0.3.2: the cycle line says what the cycle still owes and in how many days; the week line is named the week guide, without a per-day figure.
