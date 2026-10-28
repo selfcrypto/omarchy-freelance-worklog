@@ -101,6 +101,33 @@ Panel {
     return r === "lock" ? "screen locked" : (r === "idle" ? "idle" : (r === "suspend" ? "suspend" : (r === "restart" ? "shutdown" : "")))
   }
 
+  // The footer's key hints, page by page. Keys that belong to one row or
+  // button stay beside it (away actions, discard, add on a day).
+  readonly property var footerKeys: {
+    if (!ready) return []
+    if (page === "review" || page === "editor")
+      return [{ key: "ctrl+enter", text: page === "review" ? "confirm" : "save" }, { key: "tab", text: "next field" }, { key: "esc", text: "back" }]
+    if (page === "companies")
+      return companiesMode === "list"
+        ? [{ key: "enter", text: "edit" }, { key: "p", text: "new terms" }, { key: "a", text: "add" }, { key: "u", text: "use" }, { key: "del", text: "archive" }]
+        : [{ key: "ctrl+enter", text: "save" }, { key: "tab", text: "next field" }, { key: "esc", text: "back" }]
+    if (page === "month")
+      return [{ key: "←/→", text: "cycle" }].concat(monthFilters.length > 1 ? [{ key: "c", text: "company" }] : [])
+        .concat([{ key: "enter", text: "edit" }, { key: "del", text: "delete" }, { key: "n", text: "add" }, { key: "x", text: "export" }])
+    if (page === "history")
+      return [{ key: "←/→", text: "week" }, { key: "enter", text: "edit" }, { key: "del", text: "delete" }, { key: "n", text: "add" }, { key: "m", text: "month" }]
+    if (page === "away") return []
+    var live = sessionState === "running" || sessionState === "paused"
+    return [{ key: "space", text: sessionState === "running" ? "pause" : (sessionState === "paused" ? "resume" : (sessionState === "ending" ? "review" : "start")) }]
+      .concat(live ? [{ key: "e", text: "end" }] : []).concat([{ key: "n", text: "add time" }, { key: "m", text: "month" }, { key: "h", text: "history" }])
+      .concat(several ? [{ key: "c", text: "company" }] : [])
+  }
+
+  // Track page: the activity chart shows this week ("week") or 8 weeks ("weeks").
+  property string activityRange: "week"
+  // Month page: hours by day ("days") or by week ("weeks").
+  property string monthChart: "days"
+
   // ------------------------------------------------------------ navigation
 
   function go(target) {
@@ -246,7 +273,8 @@ Panel {
   // The figures the package card shows: the one company's, or null for all.
   readonly property var monthFigures: monthData && monthData.company !== "all" && monthData.companies.length ? monthData.companies[0].figures : null
   readonly property int monthOpenSec: monthData && view ? Model.monthOpenSecBetween(monthData, view, nowMs, Date.parse(monthData.startAt), Date.parse(monthData.endAt)) : 0
-  readonly property var monthLiveFig: monthFigures ? Model.cycleLive(monthFigures, monthOpenSec) : null
+  readonly property var monthLiveFig: monthFigures ? Model.cycleLive(monthFigures, monthOpenSec,
+    monthOpenSec > 0 ? Model.openSecByPart(monthFigures, view, nowMs) : null) : null
   readonly property var monthSeries: monthData && view ? Model.cycleDaySeries(monthData, view, nowMs) : { series: [], markers: [] }
   readonly property var monthWeekSeries: monthData && view ? Model.cycleWeekSeries(monthData, view, nowMs) : []
   readonly property real monthGuideHours: monthData && monthData.weeks.length ? monthData.weeks[monthData.weeks.length - 1].targetSec / 3600 : 0
@@ -694,15 +722,20 @@ Panel {
     property bool link: false
     property string linkTip: ""
     signal activated()
+    // A figure too long to share the line goes under the title.
+    readonly property bool stacked: figure !== "" && titleText.implicitWidth + figureText.implicitWidth + Style.space(8) > width
     width: parent ? parent.width : 0
     implicitHeight: headerRow.implicitHeight
 
-    RowLayout {
+    GridLayout {
       id: headerRow
       anchors.fill: parent
-      spacing: Style.space(8)
+      columns: cardHeader.stacked ? 1 : 2
+      columnSpacing: Style.space(8)
+      rowSpacing: Style.space(2)
 
       Text {
+        id: titleText
         Layout.fillWidth: true
         text: cardHeader.title + (cardHeader.link ? "  󰅂" : "")
         textFormat: Text.PlainText
@@ -714,11 +747,15 @@ Panel {
       }
 
       Text {
+        id: figureText
+        Layout.fillWidth: cardHeader.stacked
+        visible: cardHeader.figure !== ""
         text: cardHeader.figure
         textFormat: Text.PlainText
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
+        elide: Text.ElideRight
       }
     }
 
@@ -744,8 +781,10 @@ Panel {
     property string label: ""
     property bool on: false
     property bool faded: false
+    // Long labels (company names) are cut; the tooltip has them whole.
+    property real maxWidth: Style.space(160)
     signal clicked()
-    implicitWidth: chipText.implicitWidth + Style.space(12)
+    implicitWidth: Math.min(chipText.implicitWidth, maxWidth) + Style.space(12)
     implicitHeight: chipText.implicitHeight + Style.space(6)
     radius: Math.min(Style.cornerRadius, height / 2)
     color: on ? Style.selectedAccentFill : "transparent"
@@ -756,11 +795,13 @@ Panel {
     Text {
       id: chipText
       anchors.centerIn: parent
+      width: Math.min(implicitWidth, chip.maxWidth)
       text: chip.label
       textFormat: Text.PlainText
       color: chip.on ? root.accent : (chipMouse.containsMouse ? root.foreground : root.dim)
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
+      elide: Text.ElideRight
     }
 
     MouseArea {
@@ -769,6 +810,12 @@ Panel {
       hoverEnabled: true
       cursorShape: Qt.PointingHandCursor
       onClicked: chip.clicked()
+    }
+
+    PanelToolTip {
+      visible: chipMouse.containsMouse && chipText.truncated
+      text: chip.label
+      fontFamily: root.fontFamily
     }
   }
 
@@ -1247,7 +1294,8 @@ Panel {
     open: root.opened
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(400))
-    contentHeight: panel.fittedContentHeight(column.implicitHeight, Style.space(720))
+    contentHeight: panel.fittedContentHeight(hero.implicitHeight + Style.space(12) + column.implicitHeight
+      + (footer.visible ? Style.space(12) + footer.implicitHeight : 0), Style.space(720))
 
     // Not the stock PanelKeyCatcher: it eats h/j/k/l and x as cursor keys.
     Item {
@@ -1347,14 +1395,63 @@ Panel {
         else if (event.text === "h") root.go("history")
         else if (event.text === "m") root.openMonth("this", root.svc.currentCompany)
         else if (event.text === "c" && root.several) root.cycleCompany(1)
+        else if (event.text === "a") root.activityRange = root.activityRange === "week" ? "weeks" : "week"
         else if (event.text === "C") root.go("companies")
         else return
         event.accepted = true
       }
 
+      // The frame: the hero and the key hints stay put; the page scrolls
+      // between them.
+      PanelHero {
+        id: hero
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        title: root.page === "history" ? "History" : (root.page === "review" ? "Session ended"
+          : (root.page === "away" ? "Welcome back" : (root.page === "editor" ? (root.editorMode === "edit" ? "Edit session" : "Add time")
+          : (root.page === "month" ? (root.monthData ? root.monthData.label : "Month")
+          : (root.page === "companies" ? root.companiesTitle : "Freelance Worklog")))))
+        meta: {
+          if (!root.ready) return "Service not running"
+          if (root.page === "month") return root.monthMeta
+          if (root.page === "companies") return root.companiesMeta
+          if (root.page === "history") return root.history
+            ? root.history.key.replace("-", " ") + " · " + Model.weekRange(root.history.first) + " · " + Model.fmtDuration(root.history.figures.workedSec)
+            : "Loading…"
+          // The form's total: segments under a minute are left out.
+          if (root.page === "review") return (editor.check.error ? "Nothing to record" : Model.fmtDuration(editor.check.workedSec) + " worked")
+            + " · " + Model.dayLabel(Model.localDateKey(Date.parse(root.activeSince || root.view.now)))
+          if (root.page === "away") return root.svc.prompt ? "Away " + Model.fmtDuration(root.svc.prompt.awaySec) + " · paused at " + Model.localHM(root.svc.prompt.since) : ""
+          if (root.page === "editor") return root.editorMode === "edit" ? "Changes are saved as edited" : "Work you did not track"
+          if (root.sessionState === "running") return "Running · since " + Model.localHM(root.activeSince)
+          if (root.sessionState === "paused") return "Paused " + Model.fmtDuration(root.svc.pauseSec) + (root.reasonText ? " · " + root.reasonText : "")
+          if (root.sessionState === "ending") return "Waiting for review"
+          return "Not tracking"
+        }
+        foreground: root.foreground
+        fontFamily: root.fontFamily
+        iconComponent: Component {
+          Text {
+            text: root.page === "history" ? "󰋚" : (root.page === "review" ? "󰗠" : (root.page === "editor" ? "󰏫"
+              : (root.page === "month" ? "󰃭" : (root.page === "companies" ? "󰒔" : (root.sessionState === "paused" ? "󰏤" : "󰔟")))))
+            color: root.sessionState === "running" || root.page === "review" ? root.accent : root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.display
+          }
+        }
+        trailingControl: root.page === "history" ? weekNavComponent : (root.page === "track" ? switchComponent
+          : (root.page === "month" ? monthNavComponent : (root.page === "companies" ? backComponent : null)))
+      }
+
       Flickable {
         id: viewport
-        anchors.fill: parent
+        anchors.top: hero.bottom
+        anchors.topMargin: Style.space(12)
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: footer.top
+        anchors.bottomMargin: footer.visible ? Style.space(12) : 0
         contentHeight: column.implicitHeight
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -1363,44 +1460,6 @@ Panel {
           id: column
           width: viewport.width
           spacing: Style.space(12)
-
-          PanelHero {
-            width: parent.width
-            title: root.page === "history" ? "History" : (root.page === "review" ? "Session ended"
-              : (root.page === "away" ? "Welcome back" : (root.page === "editor" ? (root.editorMode === "edit" ? "Edit session" : "Add time")
-              : (root.page === "month" ? (root.monthData ? root.monthData.label : "Month")
-              : (root.page === "companies" ? root.companiesTitle : "Freelance Worklog")))))
-            meta: {
-              if (!root.ready) return "Service not running"
-              if (root.page === "month") return root.monthMeta
-              if (root.page === "companies") return root.companiesMeta
-              if (root.page === "history") return root.history
-                ? root.history.key.replace("-", " ") + " · " + Model.weekRange(root.history.first) + " · " + Model.fmtDuration(root.history.figures.workedSec)
-                : "Loading…"
-              // The form's total: segments under a minute are left out.
-              if (root.page === "review") return (editor.check.error ? "Nothing to record" : Model.fmtDuration(editor.check.workedSec) + " worked")
-                + " · " + Model.dayLabel(Model.localDateKey(Date.parse(root.activeSince || root.view.now)))
-              if (root.page === "away") return root.svc.prompt ? "Away " + Model.fmtDuration(root.svc.prompt.awaySec) + " · paused at " + Model.localHM(root.svc.prompt.since) : ""
-              if (root.page === "editor") return root.editorMode === "edit" ? "Changes are saved as edited" : "Work you did not track"
-              if (root.sessionState === "running") return "Running · since " + Model.localHM(root.activeSince) + " · today " + Model.fmtDuration(root.svc.todaySec)
-              if (root.sessionState === "paused") return "Paused " + Model.fmtDuration(root.svc.pauseSec) + (root.reasonText ? " · " + root.reasonText : "")
-              if (root.sessionState === "ending") return "Waiting for review"
-              return "Not tracking · today " + Model.fmtDuration(root.svc.todaySec)
-            }
-            foreground: root.foreground
-            fontFamily: root.fontFamily
-            iconComponent: Component {
-              Text {
-                text: root.page === "history" ? "󰋚" : (root.page === "review" ? "󰗠" : (root.page === "editor" ? "󰏫"
-                  : (root.page === "month" ? "󰃭" : (root.page === "companies" ? "󰒔" : (root.sessionState === "paused" ? "󰏤" : "󰔟")))))
-                color: root.sessionState === "running" || root.page === "review" ? root.accent : root.dim
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.display
-              }
-            }
-            trailingControl: root.page === "history" ? weekNavComponent : (root.page === "track" ? switchComponent
-              : (root.page === "month" ? monthNavComponent : (root.page === "companies" ? backComponent : null)))
-          }
 
           Component {
             id: switchComponent
@@ -1415,16 +1474,6 @@ Panel {
                 hoverColor: root.foreground
                 fontFamily: root.fontFamily
                 onClicked: root.go("companies")
-              }
-
-              PanelActionButton {
-                anchors.verticalCenter: parent.verticalCenter
-                iconText: "󰋚"
-                tooltipText: "History: every session, edit or delete (h)"
-                foreground: root.dim
-                hoverColor: root.foreground
-                fontFamily: root.fontFamily
-                onClicked: root.go("history")
               }
 
               ToggleSwitch {
@@ -1488,14 +1537,6 @@ Panel {
                 onClicked: root.go("track")
               }
               PanelActionButton {
-                iconText: "󰒓"
-                tooltipText: "Companies and contract terms (C)"
-                foreground: root.dim
-                hoverColor: root.foreground
-                fontFamily: root.fontFamily
-                onClicked: root.go("companies")
-              }
-              PanelActionButton {
                 iconText: "󰅁"
                 tooltipText: "Previous cycle (←)"
                 foreground: root.dim
@@ -1533,11 +1574,11 @@ Panel {
             width: parent.width
             spacing: Style.space(12)
 
-            // The session.
+            // The live card: the session, its clock and its controls.
             Card {
               CardHeader {
                 title: root.sessionState === "idle" ? "No session running" : (root.sessionState === "ending" ? "Session ended" : "This session")
-                figure: root.sessionState === "idle" ? "" : Model.fmtDuration(root.svc.sessionSec) + " worked"
+                figure: root.sessionState === "idle" && root.svc.todaySec === 0 ? "" : "Today " + Model.fmtDuration(root.svc.todaySec)
               }
 
               // Several companies: which one this session (or the next) is for.
@@ -1563,12 +1604,15 @@ Panel {
 
               Text {
                 width: parent.width
-                visible: root.sessionState !== "idle"
-                text: !root.view || !root.view.active ? ""
-                  : root.sessionState === "ending" ? "Write what you did and confirm the times."
-                  : (root.several && root.svc.liveCompanyInfo ? root.svc.liveCompanyInfo.name + " · " : "") + "Since " + Model.localHM(root.activeSince) + " · paused "
-                    + Model.fmtDuration(Model.sessionPausedSec(root.view, root.nowMs)) + " · "
-                    + root.view.active.segments.length + (root.view.active.segments.length === 1 ? " segment" : " segments")
+                text: {
+                  if (root.sessionState === "idle") return "Space starts the clock; n adds time you did not track."
+                  if (root.sessionState === "ending") return "Write what you did and confirm the times."
+                  if (!root.view || !root.view.active) return ""
+                  var paused = Model.sessionPausedSec(root.view, root.nowMs)
+                  var n = root.view.active.segments.length
+                  return "Since " + Model.localHM(root.activeSince) + (paused >= 60 ? " · paused " + Model.fmtDuration(paused) : "")
+                    + (n > 1 ? " · " + n + " segments" : "")
+                }
                 textFormat: Text.PlainText
                 color: root.dim
                 font.family: root.fontFamily
@@ -1627,7 +1671,8 @@ Panel {
               }
             }
 
-            // The current company's cycle against its terms.
+            // The current company's cycle: hours against its terms, this week,
+            // and what it invoices so far (the month page has the breakdown).
             Card {
               visible: root.month !== null
               CardHeader {
@@ -1689,73 +1734,48 @@ Panel {
                 elide: Text.ElideRight
               }
 
-              Rectangle { width: parent.width; height: 1; color: Util.alpha(root.foreground, 0.1) }
-
-              MoneyBlock {
-                live: root.month
-                fig: root.view ? root.view.month : null
-              }
-            }
-
-            // This week.
-            Card {
-              visible: root.week !== null
-              CardHeader {
-                title: "This week"
-                figure: dayChart.readout !== "" ? dayChart.readout : (root.view ? Model.weekRange(root.view.week.start) : "")
-              }
-
               Text {
                 width: parent.width
-                text: root.week ? Model.weekLine(root.week) : ""
+                visible: root.week !== null
+                text: {
+                  var w = root.week
+                  if (!w) return ""
+                  if (!(w.targetSec > 0)) return "This week " + Model.fmtDuration(w.workedSec)
+                  return "This week " + Model.fmtDuration(w.workedSec) + " of " + Model.fmtDuration(w.targetSec)
+                    + (w.done ? " · done" : " · " + Model.fmtDuration(w.perDaySec) + " a day")
+                }
                 textFormat: Text.PlainText
-                color: root.foreground
+                color: root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
                 elide: Text.ElideRight
               }
 
-              Meter {
-                visible: root.week !== null && root.week.targetSec > 0
-                value: root.week && root.week.targetSec > 0 ? root.week.workedSec / root.week.targetSec : 0
-              }
+              Rectangle { width: parent.width; height: 1; color: Util.alpha(root.foreground, 0.1) }
 
-              WeekChart {
-                id: dayChart
+              RowLayout {
+                id: moneyLine
+                readonly property var summary: root.month ? Model.moneySummary(root.month) : null
                 width: parent.width
-                series: root.view ? Model.daySeries(root.view, root.nowMs) : []
-                target: root.week ? root.week.targetSec / 3600 / 5 : 0
-                targetSubtle: true
-                foreground: root.foreground
-                accent: root.accent
-                fontFamily: root.fontFamily
-              }
-            }
+                spacing: Style.space(8)
 
-            // The last 8 weeks.
-            Card {
-              visible: root.view !== null
-              CardHeader {
-                title: "Last 8 weeks"
-                figure: {
-                  if (trendChart.readout !== "") return trendChart.readout
-                  if (!root.view) return ""
-                  var t = root.view.trend
-                  var sum = 0
-                  for (var i = Math.max(0, t.length - 5); i < t.length - 1; i++) sum += t[i].workedSec
-                  return "4-week average " + Model.fmtDuration(sum / 4)
+                Text {
+                  Layout.fillWidth: true
+                  text: moneyLine.summary ? moneyLine.summary.label : ""
+                  textFormat: Text.PlainText
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.caption
+                  elide: Text.ElideRight
                 }
-              }
-
-              WeekChart {
-                id: trendChart
-                width: parent.width
-                series: root.view ? Model.weekSeries(root.view, root.nowMs) : []
-                target: root.week ? root.week.targetSec / 3600 : 0
-                targetLabel: root.week ? Model.fmtDuration(root.week.targetSec) : ""
-                foreground: root.foreground
-                accent: root.accent
-                fontFamily: root.fontFamily
+                Text {
+                  text: moneyLine.summary ? moneyLine.summary.amount : ""
+                  textFormat: Text.PlainText
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.title
+                  font.bold: true
+                }
               }
             }
 
@@ -1818,7 +1838,7 @@ Panel {
                   width: parent.width
 
                   Repeater {
-                    model: root.view ? root.view.recent : []
+                    model: root.view ? root.view.recent.slice(0, 3) : []
                     delegate: SessionRow {
                       required property var modelData
                       session: modelData
@@ -1829,12 +1849,83 @@ Panel {
               }
             }
 
-            PanelSeparator { width: parent.width; foreground: root.foreground }
+            // Activity: this week by day, or the last 8 weeks (a).
+            Card {
+              visible: root.view !== null
 
-            Hints {
-              keys: [{ key: "space", text: root.sessionState === "running" ? "pause" : (root.sessionState === "paused" ? "resume" : "start") },
-                { key: "e", text: "end" }, { key: "d", text: "discard" }, { key: "n", text: "add time" }, { key: "m", text: "month" }, { key: "h", text: "history" }]
-                .concat(root.several ? [{ key: "c", text: "company" }] : []).concat([{ key: "C", text: "companies" }, { key: "esc", text: "close" }])
+              RowLayout {
+                width: parent.width
+                spacing: Style.space(6)
+
+                Text {
+                  Layout.fillWidth: true
+                  text: "Activity"
+                  textFormat: Text.PlainText
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  font.bold: true
+                  elide: Text.ElideRight
+                }
+                ChoiceChip { label: "Week"; on: root.activityRange === "week"; onClicked: root.activityRange = "week" }
+                ChoiceChip { label: "8 weeks"; on: root.activityRange === "weeks"; onClicked: root.activityRange = "weeks" }
+              }
+
+              Text {
+                width: parent.width
+                text: {
+                  if (root.activityRange === "week") return dayChart.readout !== "" ? dayChart.readout : (root.view ? Model.weekRange(root.view.week.start) : "")
+                  if (trendChart.readout !== "") return trendChart.readout
+                  if (!root.view) return ""
+                  var t = root.view.trend
+                  var sum = 0
+                  for (var i = Math.max(0, t.length - 5); i < t.length - 1; i++) sum += t[i].workedSec
+                  return "4-week average " + Model.fmtDuration(sum / 4)
+                }
+                textFormat: Text.PlainText
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                elide: Text.ElideRight
+              }
+
+              WeekChart {
+                id: dayChart
+                visible: root.activityRange === "week"
+                width: parent.width
+                series: root.view ? Model.daySeries(root.view, root.nowMs) : []
+                target: root.week ? root.week.targetSec / 3600 / 5 : 0
+                targetSubtle: true
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
+              }
+
+              WeekChart {
+                id: trendChart
+                visible: root.activityRange === "weeks"
+                width: parent.width
+                series: root.view ? Model.weekSeries(root.view, root.nowMs) : []
+                target: root.week ? root.week.targetSec / 3600 : 0
+                targetLabel: root.week ? Model.fmtDuration(root.week.targetSec) : ""
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
+              }
+
+              // What the dashed line is.
+              Text {
+                width: parent.width
+                visible: text !== ""
+                text: !root.week || !(root.week.targetSec > 0) ? ""
+                  : (root.activityRange === "week" ? "Dashed line: " + Model.fmtDuration(root.week.targetSec / 5) + " a weekday, the weekly guide over five days"
+                    : "Dashed line: the weekly guide")
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
             }
           }
 
@@ -1933,35 +2024,6 @@ Panel {
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.caption
-            }
-
-            // Hours per day.
-            Card {
-              visible: root.monthData !== null
-              CardHeader {
-                title: "Days"
-                figure: daysChart.readout !== "" ? daysChart.readout
-                  : (root.monthData ? Model.dayMonth(root.monthData.start) + " to " + Model.dayMonth(root.monthData.end) : "")
-              }
-
-              WeekChart {
-                id: daysChart
-                width: parent.width
-                series: root.monthSeries.series
-                markers: root.monthSeries.markers
-                thinning: false
-                clickable: true
-                onColumnClicked: function(i) {
-                  var d = root.monthData ? root.monthData.days[i] : null
-                  if (d) root.revealDays(d.date, d.date, true)
-                }
-                target: root.monthFigures && root.monthFigures.billing === "package" && root.monthFigures.days > 0
-                  ? root.monthFigures.targetSec / 3600 / root.monthFigures.days * 7 / 5 : 0
-                targetSubtle: true
-                foreground: root.foreground
-                accent: root.accent
-                fontFamily: root.fontFamily
-              }
             }
 
             // One company: its terms and money.
@@ -2079,16 +2141,69 @@ Panel {
               }
             }
 
-            // Weeks touching the cycle.
+            // Hours by day or by week; a bar brings its rows below into view.
             Card {
-              visible: root.monthData !== null && root.monthWeekSeries.length > 0
-              CardHeader {
-                title: "Weeks"
-                figure: weeksChart.readout
+              visible: root.monthData !== null
+
+              RowLayout {
+                width: parent.width
+                spacing: Style.space(6)
+
+                Text {
+                  Layout.fillWidth: true
+                  text: "Hours"
+                  textFormat: Text.PlainText
+                  color: root.foreground
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  font.bold: true
+                  elide: Text.ElideRight
+                }
+                ChoiceChip { label: "By day"; on: root.monthChart === "days"; onClicked: root.monthChart = "days" }
+                ChoiceChip {
+                  visible: root.monthWeekSeries.length > 0
+                  label: "By week"
+                  on: root.monthChart === "weeks"
+                  onClicked: root.monthChart = "weeks"
+                }
+              }
+
+              Text {
+                width: parent.width
+                text: root.monthChart === "weeks" && root.monthWeekSeries.length > 0
+                  ? (weeksChart.readout !== "" ? weeksChart.readout : "A bar shows that week's days below")
+                  : (daysChart.readout !== "" ? daysChart.readout
+                    : (root.monthData ? Model.dayMonth(root.monthData.start) + " to " + Model.dayMonth(root.monthData.end) + " · a bar shows its day below" : ""))
+                textFormat: Text.PlainText
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                elide: Text.ElideRight
+              }
+
+              WeekChart {
+                id: daysChart
+                visible: root.monthChart === "days"
+                width: parent.width
+                series: root.monthSeries.series
+                markers: root.monthSeries.markers
+                thinning: false
+                clickable: true
+                onColumnClicked: function(i) {
+                  var d = root.monthData ? root.monthData.days[i] : null
+                  if (d) root.revealDays(d.date, d.date, true)
+                }
+                target: root.monthFigures && root.monthFigures.billing === "package" && root.monthFigures.days > 0
+                  ? root.monthFigures.targetSec / 3600 / root.monthFigures.days * 7 / 5 : 0
+                targetSubtle: true
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
               }
 
               WeekChart {
                 id: weeksChart
+                visible: root.monthChart === "weeks"
                 width: parent.width
                 implicitHeight: Style.space(72)
                 series: root.monthWeekSeries
@@ -2100,21 +2215,67 @@ Panel {
                 accent: root.accent
                 fontFamily: root.fontFamily
               }
+
+              // What the lines on the chart are.
+              Text {
+                width: parent.width
+                visible: text !== ""
+                text: {
+                  if (root.monthChart === "weeks" && root.monthWeekSeries.length > 0)
+                    return root.monthCompany !== "all" && root.monthGuideHours > 0 ? "Dashed line: the weekly guide, " + Model.fmtHours(root.monthGuideHours) : ""
+                  var parts = []
+                  if (daysChart.target > 0) parts.push("Dashed line: " + Model.fmtHours(daysChart.target) + " a weekday")
+                  if (root.monthSeries.markers.length > 0) parts.push("dotted upright line: new terms start")
+                  return parts.join(" · ")
+                }
+                textFormat: Text.PlainText
+                wrapMode: Text.WordWrap
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
             }
 
-            // Every day, its sessions under it.
-            PanelSectionHeader {
+            // Every day, its sessions under it; the actions sit above the list.
+            RowLayout {
               visible: root.monthData !== null
               width: parent.width
-              text: "Days"
-              foreground: root.foreground
-              fontFamily: root.fontFamily
+              spacing: Style.space(8)
+
+              PanelSectionHeader {
+                Layout.fillWidth: true
+                text: "Days"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+              }
+              Button {
+                text: "Add time"
+                iconText: "󰐕"
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.fontFamily
+                tooltipText: "n: on the selected day"
+                onClicked: {
+                  var r = root.monthRows[root.monthCursor]
+                  var today = Model.localDateKey(root.nowMs)
+                  root.newEntry(r ? r.date : (root.monthData.end < today ? root.monthData.end : today))
+                }
+              }
+              Button {
+                text: "Export"
+                iconText: "󰈔"
+                foreground: root.dim
+                accent: root.accent
+                fontFamily: root.fontFamily
+                tooltipText: "The report for the client: CSV, Markdown and HTML in " + (root.svc ? root.svc.exportDir.replace(Quickshell.env("HOME"), "~") : "") + " (x)"
+                onClicked: root.svc.exportPeriod("month", root.monthKey, root.monthCompany, null)
+              }
             }
 
             Text {
               visible: root.monthData !== null
               width: parent.width
-              text: "Click a session to edit it; + on a day adds time on that day. A bar in the charts above jumps to its day or week."
+              text: "Click a session to edit it; + on a day adds time on that day."
               textFormat: Text.PlainText
               wrapMode: Text.WordWrap
               color: root.dim
@@ -2132,6 +2293,7 @@ Panel {
               Column {
                 id: monthList
                 width: parent.width
+                spacing: Style.space(2)
 
                 Repeater {
                   id: monthRowRepeater
@@ -2149,7 +2311,11 @@ Panel {
                     height: isDay ? Style.space(28) : Style.space(40)
                     radius: Style.cornerRadius
                     readonly property bool flashing: root.flashFrom !== "" && modelData.date >= root.flashFrom && modelData.date <= root.flashTo
-                    color: flashing ? Util.alpha(root.accent, 0.22) : (selected ? Style.selectedFill : (rowHover.hovered && !isDay ? root.hoverFill : "transparent"))
+                    // Day rows carry an accent tint so each day reads as the head of
+                    // its sessions; today and the selected day a stronger one.
+                    color: flashing ? Util.alpha(root.accent, 0.42)
+                      : (isDay ? Util.alpha(root.accent, selected ? 0.34 : (today ? 0.26 : 0.16))
+                        : (selected ? Style.selectedFill : (rowHover.hovered ? root.hoverFill : "transparent")))
                     Behavior on color { ColorAnimation { duration: 260 } }
 
                     HoverHandler { id: rowHover }
@@ -2186,8 +2352,7 @@ Panel {
                         text: {
                           if (!monthRow.isDay) return ""
                           var day = monthRow.modelData.day
-                          var sec = day.workedSec + (root.view ? Model.monthOpenSecBetween(root.monthData, root.view, root.nowMs,
-                            Date.parse(day.startAt), Date.parse(day.startAt) + 86400000) : 0)
+                          var sec = day.workedSec + (root.view ? Model.dayOpenSec(root.monthData, root.view, root.nowMs, monthRow.modelData.date) : 0)
                           return sec > 0 ? Model.fmtDuration(sec) : ""
                         }
                         textFormat: Text.PlainText
@@ -2251,43 +2416,7 @@ Panel {
               }
             }
 
-            RowLayout {
-              visible: root.monthData !== null
-              width: parent.width
-              spacing: Style.space(8)
 
-              Button {
-                text: "Add time"
-                iconText: "󰐕"
-                foreground: root.foreground
-                accent: root.accent
-                fontFamily: root.fontFamily
-                tooltipText: "n: on the selected day"
-                onClicked: {
-                  var r = root.monthRows[root.monthCursor]
-                  var today = Model.localDateKey(root.nowMs)
-                  root.newEntry(r ? r.date : (root.monthData.end < today ? root.monthData.end : today))
-                }
-              }
-              Item { Layout.fillWidth: true }
-              Button {
-                text: "Export month"
-                iconText: "󰈔"
-                foreground: root.dim
-                accent: root.accent
-                fontFamily: root.fontFamily
-                tooltipText: "The report for the client: CSV, Markdown and HTML in " + (root.svc ? root.svc.exportDir.replace(Quickshell.env("HOME"), "~") : "") + " (x)"
-                onClicked: root.svc.exportPeriod("month", root.monthKey, root.monthCompany, null)
-              }
-            }
-
-            PanelSeparator { width: parent.width; foreground: root.foreground }
-
-            Hints {
-              keys: [{ key: "←/→", text: "cycle" }].concat(root.monthFilters.length > 1 ? [{ key: "c", text: "company" }] : [])
-                .concat([{ key: "↑/↓", text: "select" }, { key: "enter", text: "edit" }, { key: "del", text: "delete" },
-                { key: "n", text: "add" }, { key: "x", text: "export" }, { key: "C", text: "companies" }, { key: "esc", text: "back" }])
-            }
           }
 
           // ---------------------------------------------------- companies
@@ -2437,12 +2566,6 @@ Panel {
               }
             }
 
-            PanelSeparator { width: parent.width; foreground: root.foreground }
-
-            Hints {
-              keys: [{ key: "↑/↓", text: "select" }, { key: "enter", text: "edit" }, { key: "p", text: "new terms" }, { key: "a", text: "add company" },
-                { key: "u", text: "use" }, { key: "del", text: "archive or delete" }, { key: "esc", text: "back" }]
-            }
           }
 
           // Company form.
@@ -2757,10 +2880,6 @@ Panel {
             }
           }
 
-          Hints {
-            visible: root.page === "companies" && root.companiesMode !== "list"
-            keys: [{ key: "ctrl+enter", text: "save" }, { key: "tab", text: "next field" }, { key: "esc", text: "back to the list" }]
-          }
 
           // ---------------------------------------------------- review / editor
 
@@ -2784,10 +2903,6 @@ Panel {
             onEscapePressed: keyCatcher.forceActiveFocus()
           }
 
-          Hints {
-            visible: root.page === "review" || root.page === "editor"
-            keys: [{ key: "ctrl+enter", text: root.page === "review" ? "confirm" : "save" }, { key: "tab", text: "next field" }, { key: "esc", text: "leave field, then back" }]
-          }
 
           // ---------------------------------------------------- history
 
@@ -2830,10 +2945,12 @@ Panel {
                 Repeater {
                   model: root.historyRows
                   delegate: SessionRow {
+                    id: historyRow
                     required property var modelData
                     required property int index
                     session: modelData
                     selected: index === root.cursor
+                    onSelectedChanged: if (selected) root.ensureVisible(historyRow)
                     onActivated: { root.cursor = index; root.editSession(modelData) }
                   }
                 }
@@ -2873,14 +2990,21 @@ Panel {
               }
             }
 
-            PanelSeparator { width: parent.width; foreground: root.foreground }
-
-            Hints {
-              keys: [{ key: "←/→", text: "week" }, { key: "enter", text: "edit" }, { key: "del", text: "delete" },
-                { key: "n", text: "add" }, { key: "x", text: "export week" }, { key: "m", text: "month" }, { key: "h", text: "back" }]
-            }
           }
         }
+      }
+
+      Column {
+        id: footer
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: visible ? implicitHeight : 0
+        visible: root.footerKeys.length > 0
+        spacing: Style.space(10)
+
+        PanelSeparator { width: parent.width; foreground: root.foreground }
+        Hints { keys: root.footerKeys }
       }
 
       ConfirmDialog {

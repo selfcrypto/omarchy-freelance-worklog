@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# A clipboard owner that sends 8 MB with no newline, in 64 KB pieces, and
+# logs how much it got out before it was stopped (WLPASTE_PROGRESS).
+# WLPASTE_CHAR picks the character ("x", or "é" for two bytes of UTF-8).
+import os, sys, time
+piece = (os.environ.get("WLPASTE_CHAR", "x") * 65536).encode()[:65536]
+sent = 0
+try:
+    while sent < 8 * 1024 * 1024:
+        sys.stdout.buffer.write(piece)
+        sys.stdout.buffer.flush()
+        sent += len(piece)
+        with open(os.environ["WLPASTE_PROGRESS"], "w") as f:
+            f.write(str(sent))
+        time.sleep(0.01)
+except BrokenPipeError:
+    pass

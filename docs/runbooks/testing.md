@@ -4,9 +4,10 @@
 
 ```bash
 cd ~/Work/omarchy-freelance-worklog
-python3 -m unittest discover -s tests      # helper, 44 tests, ~10 s
-node --test tests/                         # Model.js, 14 tests (sets TZ=Europe/Madrid itself)
-QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml/tst_timefield.qml
+python3 -m unittest discover -s tests      # helper, 82 tests, ~20 s
+node --test tests/                         # Model.js, 27 tests (sets TZ=Europe/Madrid itself)
+QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 16 tests
+bash tests/paste/run.sh                    # KeyField paste: copy stopped early, 4096 bytes of UTF-8 kept (fake 8 MB clipboard, runs qs)
 ```
 
 ## Static

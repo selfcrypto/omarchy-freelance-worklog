@@ -252,8 +252,9 @@ class Companies(unittest.TestCase):
         oct_ = self.month("2026-10", "c_0001", now)
         nov = self.month("2026-11", "c_0001", now)
         self.assertEqual((oct_["workedSec"], nov["workedSec"]), (3600, 3600))
+        # Listed under each day it has work on, in both cycles.
         self.assertEqual([d["date"] for d in oct_["days"] if d["sessions"]], ["2026-11-20"])
-        self.assertFalse(any(d["sessions"] for d in nov["days"]))
+        self.assertEqual([d["date"] for d in nov["days"] if d["sessions"]], ["2026-11-21"])
         self.assertEqual(len(oct_["days"]), 31)
         boundary = [w for w in nov["weeks"] if w["start"] == "2026-11-16"][0]
         self.assertEqual((boundary["daysInCycle"], boundary["workedSec"]), (2, 3600))
@@ -564,6 +565,42 @@ class Companies(unittest.TestCase):
         with open(path, "w") as f:
             json.dump(repaired, f)
         self.assertEqual(self.run_cmd("view")["view"]["currentCompany"], "c_0001")
+
+    # ------------------------------------------- found by the 0.3.0 review
+
+    def test_half_cent_vat_rounds_up(self):
+        self.terms("c_0001", "2026-10-01", monthlyFee=10.05, vatPercent=10)
+        m = self.run_cmd("view")["view"]["month"]["money"]
+        self.assertEqual((m["vat"], m["gross"]), (1.01, 11.06), m)
+
+    def test_report_keeps_a_fractional_vat_rate(self):
+        self.terms("c_0001", "2026-10-01", monthlyFee=100, vatPercent=7.5)
+        out = self.run_cmd("export", "--month", "2026-10", "--company", "c_0001", "--out", self.out)["export"]
+        with open(out["markdown"], encoding="utf-8") as f:
+            md = f.read()
+        self.assertIn("VAT 7,5 %", md)
+        self.assertNotIn("VAT 8 %", md)
+
+    def test_resume_cannot_overlap_a_confirmed_session_or_start_later(self):
+        self.run_cmd("start", now="2026-10-28T08:00:00Z")
+        self.run_cmd("pause", now="2026-10-28T09:00:00Z")
+        self.add([seg("2026-10-28T09:00:00Z", "2026-10-28T10:00:00Z")], now="2026-10-28T12:00:00Z")
+        r = self.run_cmd("resume", "--at", "2026-10-28T09:30:00Z", now="2026-10-28T12:00:00Z", ok=False)
+        self.assertIn("overlaps", r["error"])
+        r = self.run_cmd("resume", "--at", "2026-10-28T13:00:00Z", now="2026-10-28T12:00:00Z", ok=False)
+        self.assertEqual(r["field"], "at")
+        v = self.run_cmd("resume", now="2026-10-28T12:00:00Z")["view"]
+        self.assertEqual(v["state"], "running")
+
+    def test_month_lists_a_session_on_every_day_it_has_work(self):
+        # 23:00 on 30 Sep to 02:00 on 1 Oct, Madrid: two hours count in October.
+        self.add([seg("2026-09-30T21:00:00Z", "2026-10-01T00:00:00Z")], summary="Boundary work")
+        month = self.run_cmd("month", "--month", "2026-10", "--company", "c_0001")["month"]
+        day = month["days"][0]
+        self.assertEqual(day["workedSec"], 7200)
+        self.assertEqual([r["summary"] for r in day["sessions"]], ["Boundary work"])
+        sept = self.run_cmd("month", "--month", "2026-09", "--company", "c_0001")["month"]
+        self.assertEqual(len(sept["days"][-1]["sessions"]), 1)
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ import "../.."
 // QT_QPA_PLATFORM=offscreen qmltestrunner -input tests/qml/tst_keyfield.qml
 Item {
   width: 300
-  height: 200
+  height: 320
 
   property var passed: []
 
@@ -19,6 +19,9 @@ Item {
   KeyField { id: tag; y: 40; width: 100; uppercase: true; maximumLength: 4 }
   KeyField { id: digits; y: 80; width: 100; allowed: /[0-9]/ }
   KeyField { id: area; y: 120; width: 200; multiline: true }
+  KeyField { id: longLine; y: 200; width: 80 }
+  KeyField { id: longArea; y: 240; width: 120; multiline: true; maxHeight: 60 }
+  KeyField { id: longWord; y: 240; x: 150; width: 120; multiline: true; maxHeight: 60 }
 
   SignalSpy { id: accepted; target: line; signalName: "accepted" }
   SignalSpy { id: edited; target: line; signalName: "textEdited" }
@@ -98,6 +101,52 @@ Item {
       line.forceActiveFocus()
       compare(line.insert("a\tb\u0007c"), true)
       compare(line.text, "a b c")
+    }
+
+    // Home on a long line: the view goes back to the start with the caret.
+    function test_long_line_keeps_the_caret_in_view() {
+      longLine.text = "a long company name that never fits in the box"
+      longLine.cursorPosition = longLine.text.length
+      longLine.forceActiveFocus()
+      wait(0)
+      verify(longLine.caretViewX > 0 && longLine.caretViewX <= longLine.width, "end: " + longLine.caretViewX)
+      keyClick(Qt.Key_Home)
+      wait(0)
+      verify(longLine.caretViewX > 0 && longLine.caretViewX <= longLine.width, "home: " + longLine.caretViewX)
+      keyClick(Qt.Key_X)
+      wait(0)
+      compare(longLine.text.charAt(0), "x")
+      verify(longLine.caretViewX > 0 && longLine.caretViewX <= longLine.width, "typed: " + longLine.caretViewX)
+    }
+
+    // A word longer than the box (a URL) is broken over lines: with the caret
+    // at its start the first line shows, at its end the last.
+    function test_long_word_keeps_the_caret_line_in_view() {
+      longWord.text = "abcdefghijklmnopqrstuvwxyz".repeat(5)
+      longWord.cursorPosition = 0
+      longWord.forceActiveFocus()
+      wait(0)
+      compare(longWord.scrolledY, 0)
+      keyClick(Qt.Key_End)
+      wait(0)
+      verify(longWord.scrolledY > 0, "end: " + longWord.scrolledY)
+      keyClick(Qt.Key_Up)
+      wait(0)
+      compare(longWord.scrolledY, 0)
+    }
+
+    // Up (start) in a long summary: its first line comes into view.
+    function test_long_text_keeps_the_caret_line_in_view() {
+      longArea.text = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen"
+      longArea.cursorPosition = longArea.text.length
+      longArea.forceActiveFocus()
+      wait(0)
+      verify(longArea.height < 70, "box is capped: " + longArea.height)
+      verify(longArea.caretViewY > 0 && longArea.caretViewY <= longArea.height, "end: " + longArea.caretViewY)
+      keyClick(Qt.Key_Up)
+      wait(0)
+      compare(longArea.cursorPosition, 0)
+      verify(longArea.caretViewY > 0 && longArea.caretViewY <= longArea.height, "start: " + longArea.caretViewY)
     }
   }
 }

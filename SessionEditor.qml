@@ -188,8 +188,8 @@ Item {
     property bool warn: false
     property bool clickable: false
     signal clicked()
-    implicitWidth: chipText.implicitWidth + Style.space(10)
-    implicitHeight: chipText.implicitHeight + Style.space(4)
+    implicitWidth: chipText.implicitWidth + Style.space(12)
+    implicitHeight: chipText.implicitHeight + Style.space(6)
     radius: Math.min(Style.cornerRadius, height / 2)
     color: on ? Style.selectedAccentFill : "transparent"
     border.width: 1

@@ -5,44 +5,53 @@ One section per file: its first doc line, then each top-level symbol with its li
 
 <!-- repo-docs v3 roots=.,tests 2026-10-28 -->
 
-## KeyField.qml (268 lines)
+## KeyField.qml (343 lines)
 A text field without an editable Qt text control. It draws plain Text and
-- property text L19
-- property placeholderText L20
-- property maximumLength L21
-- property multiline L22
-- property uppercase L23
-- property allowed L25: Characters a keystroke may insert (a RegExp tested per character), or null.
-- property horizontalAlignment L26
-- property foreground L27
-- property accent L28
-- property urgent L29
-- property invalid L30
-- property radius L31
-- property padding L32
-- property font L33
-- property minHeight L36: then shows the end of the text.
-- property maxHeight L37
-- property cursorPosition L39
-- property allSelected L40
-- property editing L41
-- signal textEdited L43
-- signal editingFinished L44
-- signal accepted L45
-- signal unhandledKey L46
-- property caret L48
-- property lineHeight L49
-- function selectAll L57
-- function clean L59
-- function insert L71
-- function removeBefore L83
-- function removeAfter L97
-- property pasteLimit L107
-- property pasteProcess L108
-- property pasteBuffer L109
-- function paste L111
+- property text L21
+- property placeholderText L22
+- property maximumLength L23
+- property multiline L24
+- property uppercase L25
+- property allowed L27: Characters a keystroke may insert (a RegExp tested per character), or null.
+- property horizontalAlignment L28
+- property foreground L29
+- property accent L30
+- property urgent L31
+- property invalid L32
+- property radius L33
+- property padding L34
+- property font L35
+- property minHeight L38: then shows the end of the text.
+- property maxHeight L39
+- property cursorPosition L41
+- property allSelected L42
+- property editing L43
+- signal textEdited L45
+- signal editingFinished L46
+- signal accepted L47
+- signal unhandledKey L48
+- property caret L50
+- property lineHeight L51
+- property caretViewX L54: its line on many); tests check both stay in view.
+- property caretViewY L55
+- property scrolledY L57: How far the text is scrolled up inside the box (0: its first line shows).
+- function selectAll L65
+- function clean L67
+- function insert L79
+- function removeBefore L91
+- function removeAfter L105
+- property pasteLimit L115
+- property pasteProcess L116
+- property pasteBuffer L117
+- property pasteBytes L118
+- property pasteFull L119
+- function utf8Cut L123: character: { text, bytes, cut }.
+- function paste L135
+- property beforeCaret L226: The shown text up to and including the caret.
+- property wordTail L233: leaves the caret at most one line above the bottom edge.
+- property caretBottom L234
 
-## Model.js (712 lines)
+## Model.js (752 lines)
 Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - const DAY_NAMES L6
 - const MONTH_NAMES L7
@@ -75,48 +84,51 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function sessionPausedSec L167: Paused time of the live session, the running pause included.
 - function currentPauseSec L174
 - function weekLive L179
-- function round2 L193
-- function money L200: the hours owed until worked passes them; hourly and mixed have no discount.
-- function cycleLive L255: card and the month page's package card). `fig` from the helper.
-- function monthLive L272
-- function weekLine L277: "9h 40m of 12h · 2h 20m left · 3 days left · 47m a day"; no guide: hours only.
-- function paceLine L285
-- function uniformHourly L293: says it all); otherwise each part gets its own line.
-- function monthLine L301: The package line of a cycle: running, finished short or over, hourly, none.
-- function daysInMonth L317
-- function shiftMonth L319
-- function monthKey L324
-- function cycleFirst L326
-- function cycleBounds L329: { first, last } date keys of the cycle that starts in month `key`.
-- function cycleOf L338: Key of the cycle holding the date key.
-- function shiftCycle L347
-- function cycleLabel L354: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
-- function dayMonth L365: "21 Oct" / "21 Oct 2026".
-- function ordinal L370
-- function cycleName L375
-- function companyOf L379
-- function companyName L385
-- function activeCompanies L390
-- function nextInList L398: The element after (or before) `current` in `list`, wrapping.
-- function termsLine L405: "48h · 1.800 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
-- const TERM_RANGES L411
-- function checkTerms L418: clean_terms and parse_day). Returns { error, field }.
-- function sessionTip L438: Hover text of a session row on the month page.
-- function niceHours L454: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
-- function barHeight L460
-- function daySeries L466: The 7 bars of the week chart, the open segment added to today.
-- function weekSeries L484: The 8 bars of the trend, this week (live) last.
-- function monthOpenSecBetween L502: The live segment's seconds that count on the month page (its company, or all).
-- function cycleDaySeries L510: Mondays and the days new terms start; markers where terms start.
-- function cycleWeekSeries L530: The ISO weeks touching the cycle, hours inside the cycle only.
-- function rowsFromSegments L556: midnight, `to` -1 while open). Built from stored segments.
-- function rowInstant L579: midnight or for days), so only its minutes are compared.
-- function checkRows L588: pausedSec, first, last }.
-- function parseTags L638
-- function clip L648
-- function firstLine L653
+- function round2 L195: places first, so 10,05 at 10 % (100.4999... hundredths in binary) gives 1,01.
+- function money L202: the hours owed until worked passes them; hourly and mixed have no discount.
+- function cycleLive L257: card and the month page's package card). `fig` from the helper.
+- function monthLive L281
+- function openSecByPart L288: from local midnight of its first day to local midnight after its last.
+- function weekLine L295: "9h 40m of 12h · 2h 20m left · 3 days left · 47m a day"; no guide: hours only.
+- function paceLine L303
+- function uniformHourly L311: says it all); otherwise each part gets its own line.
+- function monthLine L319: The package line of a cycle: running, finished short or over, hourly, none.
+- function moneySummary L335: { label, amount }; the month page shows the whole breakdown.
+- function daysInMonth L348
+- function shiftMonth L350
+- function monthKey L355
+- function cycleFirst L357
+- function cycleBounds L360: { first, last } date keys of the cycle that starts in month `key`.
+- function cycleOf L369: Key of the cycle holding the date key.
+- function shiftCycle L378
+- function cycleLabel L385: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
+- function dayMonth L396: "21 Oct" / "21 Oct 2026".
+- function ordinal L401
+- function cycleName L406
+- function companyOf L410
+- function companyName L416
+- function activeCompanies L421
+- function nextInList L429: The element after (or before) `current` in `list`, wrapping.
+- function termsLine L436: "48h · 1.800 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
+- const TERM_RANGES L442
+- function checkTerms L449: clean_terms and parse_day). Returns { error, field }.
+- function sessionTip L469: Hover text of a session row on the month page.
+- function niceHours L485: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
+- function barHeight L491
+- function daySeries L497: The 7 bars of the week chart, the open segment added to today.
+- function weekSeries L515: The 8 bars of the trend, this week (live) last.
+- function monthOpenSecBetween L533: The live segment's seconds that count on the month page (its company, or all).
+- function dayOpenSec L541: midnight (a DST day lasts 23 or 25 hours).
+- function cycleDaySeries L547: Mondays and the days new terms start; markers where terms start.
+- function cycleWeekSeries L567: The ISO weeks touching the cycle, hours inside the cycle only.
+- function rowsFromSegments L593: midnight, `to` -1 while open). Built from stored segments.
+- function rowInstant L616: midnight or for days), so only its minutes are compared.
+- function checkRows L625: pausedSec, first, last }.
+- function parseTags L675
+- function clip L685
+- function firstLine L690
 
-## Panel.qml (2898 lines)
+## Panel.qml (3022 lines)
 Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property svc L29
 - property ready L30
@@ -157,74 +169,77 @@ Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property fontFamily L96
 - property hoverFill L97
 - property reasonText L99
-- function go L106
-- function newEntry L129: dateKey: the day the new rows fall on (the month page's day rows).
-- function editSession L140
-- function openMonth L151
-- property monthRequest L162: so a slow reply never shows another company or cycle than the one picked.
-- function loadMonth L163
-- property monthLimit L186: The cycle the month page cannot go past: the one holding today.
-- function shiftMonth L192
-- property monthFilters L203: company, then archived ones that have sessions in the shown period.
-- function setMonthCompany L217
-- function cycleMonthCompany L229
-- property monthRows L235: Day and session rows, flattened for the keyboard cursor.
-- property monthFigures L247: The figures the package card shows: the one company's, or null for all.
-- property monthOpenSec L248
-- property monthLiveFig L249
-- property monthSeries L250
-- property monthWeekSeries L251
-- property monthGuideHours L252
-- function formKey L255: Field keys on the companies forms: Ctrl+Enter saves, Esc goes back to the list.
-- function ensureVisible L272: Scroll the panel so `item` (a row) is in view.
-- property flashFrom L282: for a moment (`flashFrom` to `flashTo`, date keys).
-- property flashTo L283
-- function dayRowIndex L290
-- function revealDays L295
-- function revealWeek L309
-- function monthActivate L317
-- function askDeleteMonthRow L324
-- property selectedCompanyId L339: Company rows, the selected company's periods under it (newest first).
-- property companyRows L340
-- function companyIndex L352
-- property companyRow L357
-- property selectedCompany L358
-- function selectCompanyRow L360
-- function moveCompanyCursor L372
-- function activateCompanyRow L376
-- function editCompany L383
-- function saveCompany L394
-- function editPeriod L412: A period of `c`; null `period` adds one from the next cycle's first day.
-- property termsBilling L433
-- property termsDraft L434
-- property termsCheck L439
-- property termsCaption L442: A date in the middle of a cycle prorates that cycle.
-- function savePeriod L452
-- function askCompanyDelete L469
-- function loadHistory L495
-- function shiftWeek L503
-- property historyRows L516
-- function submitEditor L520
-- function cancelEditor L538
-- function askDestroy L543
-- function askDiscard L559: track page or the d key. Nothing is written; the dialog defaults to Cancel.
-- function askDeleteRow L568
-- function runConfirmed L580
-- function openHistoryMonth L596: The month page for the cycle holding the shown week's Monday.
-- function cycleCompany L603: Next active company on the track page (the live session moves with it).
-- function primaryAction L608
-- component KeyCap L650: A key as printed on the keyboard, for the keys the panel answers to.
-- component Card L671: A card: the shared fill and padding.
-- component CardHeader L689: Card header: a title on the left, a figure (or the chart readout) right.
-- component ChoiceChip L742: A pill-shaped choice: filled when on (the WireGuard verdict chip look).
-- component CompanyChips L776: A row of company chips; `companies` items carry id, name and archived.
-- component MoneyBlock L799: `live` from Model.cycleLive, `fig` the helper's cycle figures.
-- component Meter L989: says the bar should be by now.
-- component ActionRow L1019: A two-line action row with its key, as in the other panels.
-- component SessionRow L1093: A session in a list: day, times, duration; summary and tags under it.
-- component Hints L1166
-- property pillLabel L1195
-- property liveCompanyName L1204
+- property footerKeys L106: button stay beside it (away actions, discard, add on a day).
+- property activityRange L127: Track page: the activity chart shows this week ("week") or 8 weeks ("weeks").
+- property monthChart L129: Month page: hours by day ("days") or by week ("weeks").
+- function go L133
+- function newEntry L156: dateKey: the day the new rows fall on (the month page's day rows).
+- function editSession L167
+- function openMonth L178
+- property monthRequest L189: so a slow reply never shows another company or cycle than the one picked.
+- function loadMonth L190
+- property monthLimit L213: The cycle the month page cannot go past: the one holding today.
+- function shiftMonth L219
+- property monthFilters L230: company, then archived ones that have sessions in the shown period.
+- function setMonthCompany L244
+- function cycleMonthCompany L256
+- property monthRows L262: Day and session rows, flattened for the keyboard cursor.
+- property monthFigures L274: The figures the package card shows: the one company's, or null for all.
+- property monthOpenSec L275
+- property monthLiveFig L276
+- property monthSeries L278
+- property monthWeekSeries L279
+- property monthGuideHours L280
+- function formKey L283: Field keys on the companies forms: Ctrl+Enter saves, Esc goes back to the list.
+- function ensureVisible L300: Scroll the panel so `item` (a row) is in view.
+- property flashFrom L310: for a moment (`flashFrom` to `flashTo`, date keys).
+- property flashTo L311
+- function dayRowIndex L318
+- function revealDays L323
+- function revealWeek L337
+- function monthActivate L345
+- function askDeleteMonthRow L352
+- property selectedCompanyId L367: Company rows, the selected company's periods under it (newest first).
+- property companyRows L368
+- function companyIndex L380
+- property companyRow L385
+- property selectedCompany L386
+- function selectCompanyRow L388
+- function moveCompanyCursor L400
+- function activateCompanyRow L404
+- function editCompany L411
+- function saveCompany L422
+- function editPeriod L440: A period of `c`; null `period` adds one from the next cycle's first day.
+- property termsBilling L461
+- property termsDraft L462
+- property termsCheck L467
+- property termsCaption L470: A date in the middle of a cycle prorates that cycle.
+- function savePeriod L480
+- function askCompanyDelete L497
+- function loadHistory L523
+- function shiftWeek L531
+- property historyRows L544
+- function submitEditor L548
+- function cancelEditor L566
+- function askDestroy L571
+- function askDiscard L587: track page or the d key. Nothing is written; the dialog defaults to Cancel.
+- function askDeleteRow L596
+- function runConfirmed L608
+- function openHistoryMonth L624: The month page for the cycle holding the shown week's Monday.
+- function cycleCompany L631: Next active company on the track page (the live session moves with it).
+- function primaryAction L636
+- component KeyCap L678: A key as printed on the keyboard, for the keys the panel answers to.
+- component Card L699: A card: the shared fill and padding.
+- component CardHeader L717: Card header: a title on the left, a figure (or the chart readout) right.
+- component ChoiceChip L779: A pill-shaped choice: filled when on (the WireGuard verdict chip look).
+- component CompanyChips L823: A row of company chips; `companies` items carry id, name and archived.
+- component MoneyBlock L846: `live` from Model.cycleLive, `fig` the helper's cycle figures.
+- component Meter L1036: says the bar should be by now.
+- component ActionRow L1066: A two-line action row with its key, as in the other panels.
+- component SessionRow L1140: A session in a list: day, times, duration; summary and tags under it.
+- component Hints L1213
+- property pillLabel L1242
+- property liveCompanyName L1251
 
 ## Service.qml (602 lines)
 Worklog service: the one owner of the session state. The shell loads it
@@ -394,20 +409,28 @@ A column chart drawn with Rectangles: one bar per entry of `series`
 - property thinLabels L47
 - function barColor L51
 
-## tests/model.test.js (323 lines)
+## tests/model.test.js (362 lines)
 Model.js: TZ=Europe/Madrid node --test tests
 - const NOW L7
 - function pkg L9
 - function view L16
 
-## tests/qml/tst_keyfield.qml (103 lines)
+## tests/paste/paste.qml (12 lines)
+KeyField's paste against a clipboard of 8 MB with no newline (bin/wl-paste):
+- property peak L8
+
+## tests/paste/run.sh (25 lines)
+KeyField paste cap under Quickshell: bash tests/paste/run.sh
+- fn check L13
+
+## tests/qml/tst_keyfield.qml (152 lines)
 KeyField: typing without an editable Qt text control. Run:
 - property passed L11
 
 ## tests/qml/tst_timefield.qml (53 lines)
 TimeField keeps what is typed (review 2026-10-27). Run:
 
-## tests/test_companies.py (570 lines)
+## tests/test_companies.py (607 lines)
 Companies, contract periods and billing cycles (v2):
 - const FIXTURE_TERMS L12
 - const HELPER L15
@@ -415,7 +438,7 @@ Companies, contract periods and billing cycles (v2):
 - def load_module() L19
 - const W L27
 - def seg(start, end) L30
-- class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies]
+- class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies, test_half_cent_vat_rounds_up, test_report_keeps_a_fractional_vat_rate, test_resume_cannot_overlap_a_confirmed_session_or_start_later, test_month_lists_a_session_on_every_day_it_has_work]
 
 ## tests/test_worklog.py (558 lines)
 Data layer tests: python3 -m unittest discover -s tests
@@ -423,7 +446,7 @@ Data layer tests: python3 -m unittest discover -s tests
 - const HELPER L15
 - class Helper L18 [setUp, tearDown, run_cmd, log, has_active, active, test_full_cycle, test_commands_in_wrong_state_are_no_ops, test_start_while_paused_resumes, test_idle_pause_back_dated_and_clamped, test_unpause_counts_the_gap_as_work, test_back_from_review, test_confirm_without_args_uses_the_draft, test_discard, test_draft_survives, test_start_with_earlier_segments, test_start_with_closed_last_segment_refused, test_recover_same_boot_fresh_heartbeat, test_recover_stale_heartbeat, test_recover_other_boot, test_recover_keeps_review, test_midnight_split, test_dst_weekend_counts_real_seconds, test_week_figures, test_trend_has_eight_weeks_oldest_first, test_month_and_money, test_money_over_the_package, test_legacy_settings_seed_the_first_company, test_validation, test_overlap_with_other_session_and_running, test_short_segments_dropped_at_confirm, test_empty_session_cannot_be_confirmed, test_confirm_with_edited_segments, test_update_delete_and_sorting, test_sessions_by_week_and_month, test_backup_once_per_day, test_corrupt_log_moved_aside, test_concurrent_writers, test_export_week, test_export_month_spanish_rounded_with_discount, test_confirm_retried_after_a_cut_does_not_duplicate, test_recover_drops_an_already_confirmed_active, test_export_clips_sessions_to_the_period, test_unpause_after_restart_keeps_the_counted_time, test_resume_refreshes_the_heartbeat, test_unpause_refuses_an_overlap, test_malformed_session_answers_in_json_and_keeps_the_file, test_group_writable_data_dir_is_tightened, test_csv_cells_never_start_a_formula, test_interrupted_backup_leaves_no_daily_backup, helper, test_stdin_arguments_stay_off_the_command_line, test_bad_stdin_arguments_are_refused, test_command_line_arguments_still_work, test_refusals_never_echo_a_tag]
 
-## worklog.py (2237 lines)
+## worklog.py (2267 lines)
 Worklog data helper: the only writer of the worklog files.
 - const VERSION L45
 - const MIN_SEGMENT_SEC L46
@@ -457,111 +480,113 @@ Worklog data helper: the only writer of the worklog files.
 - def month_bounds(key) L181
 - def shift_month(y, m, n) L186
 - def parse_day(value, field) L191
-- def cents(x) L201: Money rounded to the cent half up, as Model.js round2 does
-- def overlap_sec(a_start, a_end, b_start, b_end) L207
-- def cycle_first(cycle_day, y, m) L213
-- def cycle_bounds(cycle_day, key) L217: First and last local day of the cycle named by the month it starts in.
-- def cycle_of(cycle_day, d) L225: Key of the cycle holding local date d.
-- def shift_cycle(key, n) L233
-- def number(value, field, low, high) L240
-- def clean_terms(raw) L252: Contract terms from the panel or the file, validated. Raises Refusal
-- def clean_name(value) L289
-- def clean_tag(value, name) L296
-- def clean_cycle_day(value) L305
-- def stored_terms_problem(k) L315: Stored terms must be what clean_terms would write: every key, real
-- def company_problem(c) L335: Why a stored company cannot be used, or "" when it can.
-- def session_problem(s, allow_open) L379: Why a stored session cannot be used, or "" when it can.
-- def config_from(raw) L408: UI preferences from the service. The six v1 terms keys, at the top
-- def terms_from_legacy(legacy) L440
-- def new_company(cid, name, tag, cycle_day, start, terms, now) L452
-- def data_dir() L462
-- class Store L480 [__init__, close, _read_json, _set_aside, _fresh_log, _migrate, _load_log, _load_active, _write, _copy, _backup, save_log, save_active]
-- def company_by_id(store, cid) L676
-- def resolve_company(store, ref, allow_archived) L683: A company named by id, name or tag (case-insensitive). Archived
-- def current_company(store) L700
-- def fallback_company(log, leaving) L704: The company to make current when `leaving` cannot stay current: the
-- def terms_on(company, d) L717: Terms in force on local date d, or None before the first period.
-- def guide_on(company, d) L727
-- def cycle_parts(company, first, last) L732: The cycle cut where the terms change: [(from, to, terms or None)].
-- def cycle_label(cycle_day, first, last, lang) L746
-- def company_row(store, c, today) L761
-- def companies_sorted(store) L769
-- def seg_bounds(seg, now) L775
-- def worked_sec(segments, now, closed_only) L781
-- def paused_sec(segments, now) L791
-- def clean_segments(raw, now, allow_open, drop_short) L799: Validate a segment list from the editor. Returns a new sorted list.
-- def clean_summary(text) L844
-- def clean_tags(raw) L853
-- def check_no_overlap(store, segments, now, skip_id, include_active) L872
-- def new_id(now) L887
-- def all_segments(store, include_active, now, company) L893: Closed segments of the confirmed sessions and, when asked, of the live
-- def sec_between(segments, start, end, now) L906
-- def week_figures(segments, monday, today, target_sec, now) L914
-- def days_elapsed(first, last, today) L932
-- def cycle_figures(company, key, segments, today, now) L940: One company's cycle: owed hours, pace and the parts its terms cut it
-- def money(fig, worked_sec_value, part_worked) L1000: What the cycle bills for `worked_sec_value` seconds. The seconds the
-- def session_row(s, now) L1058
-- def recent_tags(store) L1077
-- def build_view(store, now) L1088
-- def need_state(store) L1151
-- def close_open(store, at, reason) L1158
-- def cmd_start(store, args, now) L1167
-- def cmd_pause(store, args, now) L1200
-- def cmd_resume(store, args, now) L1210
-- def cmd_unpause(store, args, now) L1224: Count the pause as work: the last segment runs on as if never closed.
-- def cmd_stop(store, args, now) L1238
-- def cmd_back(store, args, now) L1248
-- def cmd_draft(store, args, now) L1257
-- def cmd_edit_active(store, args, now) L1266
-- def session_company(store, args, default) L1285: --company for a confirmed session: any active company, or the one the
-- def cmd_confirm(store, args, now) L1296
-- def cmd_discard(store, args, now) L1323
-- def cmd_heartbeat(store, args, now) L1328
-- def cmd_recover(store, args, now) L1335: Service start: a running session whose heartbeat is stale, or from
-- def cmd_announce(store, args, now) L1358
-- def find_session(store, sid) L1363
-- def cmd_add(store, args, now) L1370
-- def cmd_update(store, args, now) L1388
-- def cmd_delete(store, args, now) L1398
-- def check_name_free(store, name, skip_id) L1405
-- def cmd_company(store, args, now) L1411
-- def check_currency_cuts(company) L1470: A cycle bills in one currency: a period that changes the currency must
-- def cmd_overage(store, args, now) L1480: Waive (or bill again) the hours over the package in one cycle.
-- def cmd_contract(store, args, now) L1494
-- def sessions_in(store, first, last, now, company) L1524
-- def cmd_sessions(store, args, now, cfg) L1537
-- def month_key_arg(value, company, today) L1548
-- def cmd_month(store, args, now) L1555: The month page: one company's cycle, or a calendar month for all.
-- const TEXT L1627
-- def fmt_duration(sec) L1723
-- def fmt_money(value, lang, currency) L1734: 1.800,00 €: Spanish separators in both report languages, as the
-- def fmt_number(value, lang, digits) L1741
-- def ordinal(n) L1745
-- def day_label(d, t) L1753
-- def short_day(d, t, year) L1757
-- def span_label(a, b, t) L1762
-- def rounded(sec, rounding_min) L1770
-- def slug(name) L1777
-- def export_rows(sessions, now, rounding_min, period_start, period_end, names) L1781: One row per session, its segments clipped to the period, so a session
-- def row_parts(row, parts, now) L1810: A row's (rounded) seconds split over the terms parts by where its
-- def csv_text(value) L1823: A cell a spreadsheet shows as text, never runs as a formula.
-- def write_csv(path, rows) L1829
-- def one_line(text) L1840
-- def terms_text(terms, t, lang) L1849
-- def cycle_text(cycle_day, t) L1858
-- def table_rows(rows, t, with_company) L1864
-- def month_report(company, fig, rows, cfg, now) L1876: The monthly report of one company as plain parts: title, terms lines,
-- def week_report(company, monday, rows, cfg, now, with_company) L1960
-- def md_escape(text) L1982: Plain text in Markdown: no markup, links, images or raw HTML from the
-- def render_markdown(rep) L1988
-- const HTML_PAGE L2006
-- def render_html(rep) L2042
-- def write_report(out_dir, stem, rep, rows, cfg) L2067: The CSV, Markdown and HTML of one report under one free name: a
-- def cmd_export(store, args, now, cfg) L2088
-- const MUTATING L2130
-- const LOG_WRITERS L2137
-- def parser() L2140
-- def run(argv) L2166
-- const MAX_STDIN L2198
-- def stdin_argv() L2201: `worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
-- def main(argv) L2217
+- def cents(x) L201: Money rounded to the cent half up, as Model.js round2 does, so the
+- def session_days(sess) L209: The local days a confirmed session has work on, in order.
+- def overlap_sec(a_start, a_end, b_start, b_end) L223
+- def cycle_first(cycle_day, y, m) L229
+- def cycle_bounds(cycle_day, key) L233: First and last local day of the cycle named by the month it starts in.
+- def cycle_of(cycle_day, d) L241: Key of the cycle holding local date d.
+- def shift_cycle(key, n) L249
+- def number(value, field, low, high) L256
+- def clean_terms(raw) L268: Contract terms from the panel or the file, validated. Raises Refusal
+- def clean_name(value) L305
+- def clean_tag(value, name) L312
+- def clean_cycle_day(value) L321
+- def stored_terms_problem(k) L331: Stored terms must be what clean_terms would write: every key, real
+- def company_problem(c) L351: Why a stored company cannot be used, or "" when it can.
+- def session_problem(s, allow_open) L395: Why a stored session cannot be used, or "" when it can.
+- def config_from(raw) L424: UI preferences from the service. The six v1 terms keys, at the top
+- def terms_from_legacy(legacy) L456
+- def new_company(cid, name, tag, cycle_day, start, terms, now) L468
+- def data_dir() L478
+- class Store L496 [__init__, close, _read_json, _set_aside, _fresh_log, _migrate, _load_log, _load_active, _write, _copy, _backup, save_log, save_active]
+- def company_by_id(store, cid) L692
+- def resolve_company(store, ref, allow_archived) L699: A company named by id, name or tag (case-insensitive). Archived
+- def current_company(store) L716
+- def fallback_company(log, leaving) L720: The company to make current when `leaving` cannot stay current: the
+- def terms_on(company, d) L733: Terms in force on local date d, or None before the first period.
+- def guide_on(company, d) L743
+- def cycle_parts(company, first, last) L748: The cycle cut where the terms change: [(from, to, terms or None)].
+- def cycle_label(cycle_day, first, last, lang) L762
+- def company_row(store, c, today) L777
+- def companies_sorted(store) L785
+- def seg_bounds(seg, now) L791
+- def worked_sec(segments, now, closed_only) L797
+- def paused_sec(segments, now) L807
+- def clean_segments(raw, now, allow_open, drop_short) L815: Validate a segment list from the editor. Returns a new sorted list.
+- def clean_summary(text) L860
+- def clean_tags(raw) L869
+- def check_no_overlap(store, segments, now, skip_id, include_active) L888
+- def new_id(now) L903
+- def all_segments(store, include_active, now, company) L909: Closed segments of the confirmed sessions and, when asked, of the live
+- def sec_between(segments, start, end, now) L922
+- def week_figures(segments, monday, today, target_sec, now) L930
+- def days_elapsed(first, last, today) L948
+- def cycle_figures(company, key, segments, today, now) L956: One company's cycle: owed hours, pace and the parts its terms cut it
+- def money(fig, worked_sec_value, part_worked) L1016: What the cycle bills for `worked_sec_value` seconds. The seconds the
+- def session_row(s, now) L1074
+- def recent_tags(store) L1093
+- def build_view(store, now) L1104
+- def need_state(store) L1167
+- def close_open(store, at, reason) L1174
+- def cmd_start(store, args, now) L1183
+- def cmd_pause(store, args, now) L1216
+- def cmd_resume(store, args, now) L1226
+- def cmd_unpause(store, args, now) L1244: Count the pause as work: the last segment runs on as if never closed.
+- def cmd_stop(store, args, now) L1258
+- def cmd_back(store, args, now) L1268
+- def cmd_draft(store, args, now) L1277
+- def cmd_edit_active(store, args, now) L1286
+- def session_company(store, args, default) L1305: --company for a confirmed session: any active company, or the one the
+- def cmd_confirm(store, args, now) L1316
+- def cmd_discard(store, args, now) L1343
+- def cmd_heartbeat(store, args, now) L1348
+- def cmd_recover(store, args, now) L1355: Service start: a running session whose heartbeat is stale, or from
+- def cmd_announce(store, args, now) L1378
+- def find_session(store, sid) L1383
+- def cmd_add(store, args, now) L1390
+- def cmd_update(store, args, now) L1408
+- def cmd_delete(store, args, now) L1418
+- def check_name_free(store, name, skip_id) L1425
+- def cmd_company(store, args, now) L1431
+- def check_currency_cuts(company) L1490: A cycle bills in one currency: a period that changes the currency must
+- def cmd_overage(store, args, now) L1500: Waive (or bill again) the hours over the package in one cycle.
+- def cmd_contract(store, args, now) L1514
+- def sessions_in(store, first, last, now, company) L1544
+- def cmd_sessions(store, args, now, cfg) L1557
+- def month_key_arg(value, company, today) L1568
+- def cmd_month(store, args, now) L1575: The month page: one company's cycle, or a calendar month for all.
+- const TEXT L1652
+- def fmt_duration(sec) L1748
+- def fmt_money(value, lang, currency) L1759: 1.800,00 €: Spanish separators in both report languages, as the
+- def fmt_number(value, lang, digits) L1766
+- def fmt_rate(value, lang) L1770: A VAT rate as given: 21, 7,5, 10,25 (no rounding to whole points).
+- def ordinal(n) L1775
+- def day_label(d, t) L1783
+- def short_day(d, t, year) L1787
+- def span_label(a, b, t) L1792
+- def rounded(sec, rounding_min) L1800
+- def slug(name) L1807
+- def export_rows(sessions, now, rounding_min, period_start, period_end, names) L1811: One row per session, its segments clipped to the period, so a session
+- def row_parts(row, parts, now) L1840: A row's (rounded) seconds split over the terms parts by where its
+- def csv_text(value) L1853: A cell a spreadsheet shows as text, never runs as a formula.
+- def write_csv(path, rows) L1859
+- def one_line(text) L1870
+- def terms_text(terms, t, lang) L1879
+- def cycle_text(cycle_day, t) L1888
+- def table_rows(rows, t, with_company) L1894
+- def month_report(company, fig, rows, cfg, now) L1906: The monthly report of one company as plain parts: title, terms lines,
+- def week_report(company, monday, rows, cfg, now, with_company) L1990
+- def md_escape(text) L2012: Plain text in Markdown: no markup, links, images or raw HTML from the
+- def render_markdown(rep) L2018
+- const HTML_PAGE L2036
+- def render_html(rep) L2072
+- def write_report(out_dir, stem, rep, rows, cfg) L2097: The CSV, Markdown and HTML of one report under one free name: a
+- def cmd_export(store, args, now, cfg) L2118
+- const MUTATING L2160
+- const LOG_WRITERS L2167
+- def parser() L2170
+- def run(argv) L2196
+- const MAX_STDIN L2228
+- def stdin_argv() L2231: `worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
+- def main(argv) L2247

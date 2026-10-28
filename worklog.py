@@ -199,9 +199,25 @@ def parse_day(value, field="from"):
 
 
 def cents(x):
-    """Money rounded to the cent half up, as Model.js round2 does
-    (Math.round(x * 100) / 100), so the panel and the reports agree."""
-    return math.floor(x * 100 + 0.5) / 100
+    """Money rounded to the cent half up, as Model.js round2 does, so the
+    panel and the reports agree. The hundredths are first rounded to six
+    places: 10,05 at 10 % is 100.49999... hundredths in binary, and must
+    round up to 1,01."""
+    return math.floor(round(x * 100, 6) + 0.5) / 100
+
+
+def session_days(sess):
+    """The local days a confirmed session has work on, in order."""
+    out = []
+    for seg in sess["segments"]:
+        a = local(parse_iso(seg["start"]))
+        b = local(parse_iso(seg["end"])) - timedelta(microseconds=1)
+        d = a.date()
+        while d <= b.date():
+            if d not in out:
+                out.append(d)
+            d += timedelta(days=1)
+    return out
 
 
 def overlap_sec(a_start, a_end, b_start, b_end):
@@ -1212,9 +1228,13 @@ def cmd_resume(store, args, now):
     if state == "ending":
         return cmd_back(store, args, now)
     at = parse_iso(args.at) if args.at else now
+    if at > now:
+        raise Refusal("the resume time is in the future", "at")
     last_end = parse_iso(store.active["session"]["segments"][-1]["end"])
     at = max(at, last_end)
-    store.active["session"]["segments"].append({"start": iso(at), "end": None})
+    segments = [dict(x) for x in store.active["session"]["segments"]] + [{"start": iso(at), "end": None}]
+    check_no_overlap(store, segments, now, skip_id=store.active["session"]["id"])
+    store.active["session"]["segments"] = segments
     store.active["state"] = "running"
     store.active["pauseReason"] = ""
     store.active["announced"] = True
@@ -1565,10 +1585,15 @@ def cmd_month(store, args, now):
         first, last = month_bounds(key)
         cid = None
     segs = all_segments(store, True, now, cid)
-    rows = [session_row(s, now) for s in store.log["sessions"] if cid is None or s.get("company") == cid]
+    # A session is listed under every day it has work on, so a session that
+    # runs past midnight (or in from the last cycle) shows where its hours count.
     by_day = {}
-    for r in rows:
-        by_day.setdefault(r["date"], []).append(r)
+    for sess in store.log["sessions"]:
+        if cid is not None and sess.get("company") != cid:
+            continue
+        r = session_row(sess, now)
+        for d in session_days(sess) or [r["date"]]:
+            by_day.setdefault(str(d), []).append(r)
     starts = {k["from"] for k in company["contracts"]} if company else set()
     days = []
     d = first
@@ -1742,6 +1767,11 @@ def fmt_number(value, lang, digits=1):
     return ("{:.%df}" % digits).format(value).replace(".", ",")
 
 
+def fmt_rate(value, lang):
+    """A VAT rate as given: 21, 7,5, 10,25 (no rounding to whole points)."""
+    return ("%.2f" % value).rstrip("0").rstrip(".").replace(".", ",")
+
+
 def ordinal(n):
     if 10 <= n % 100 <= 20:
         suffix = "th"
@@ -1849,9 +1879,9 @@ def one_line(text):
 def terms_text(terms, t, lang):
     cur = terms["currency"]
     if terms["billing"] == "hourly":
-        return t["hourly_terms"].format(rate=fmt_money(terms["standardRate"], lang, cur), vat=fmt_number(terms["vatPercent"], lang, 0))
+        return t["hourly_terms"].format(rate=fmt_money(terms["standardRate"], lang, cur), vat=fmt_rate(terms["vatPercent"], lang))
     return t["package_terms"].format(hours=fmt_duration(terms["monthlyHours"] * 3600), fee=fmt_money(terms["monthlyFee"], lang, cur),
-                                     vat=fmt_number(terms["vatPercent"], lang, 0), rate=fmt_money(terms["standardRate"], lang, cur),
+                                     vat=fmt_rate(terms["vatPercent"], lang), rate=fmt_money(terms["standardRate"], lang, cur),
                                      extra=fmt_money(terms.get("overageRate", terms["standardRate"]), lang, cur))
 
 
@@ -1917,7 +1947,7 @@ def month_report(company, fig, rows, cfg, now):
         diff = total - fig["targetSec"]
         totals[-1] += " " + (t["under"].format(diff=fmt_duration(-diff)) if diff < 0 else
                              t["over"].format(diff=fmt_duration(diff)) if diff > 0 else t["even"])
-        vat_label = fmt_number(vats.pop(), lang, 0) if len(vats) == 1 else None
+        vat_label = fmt_rate(vats.pop(), lang) if len(vats) == 1 else None
         if m["overSec"] > 0:
             extra = {"hours": fmt_duration(m["overSec"]), "rate": eur(m["overageRate"]), "net": eur(m["overageNet"])}
             totals.append(t["package_fee"].format(fee=eur(m["fee"])))
@@ -1935,7 +1965,7 @@ def month_report(company, fig, rows, cfg, now):
     elif fig["billing"] == "hourly" and len(fig["parts"]) == 1:
         p = fig["parts"][0]
         totals.append(t["worked"].format(worked=fmt_duration(total)))
-        totals.append(t["billed"].format(rate=eur(p["standardRate"]), net=eur(m["net"]), vat=fmt_number(p["vatPercent"], lang, 0),
+        totals.append(t["billed"].format(rate=eur(p["standardRate"]), net=eur(m["net"]), vat=fmt_rate(p["vatPercent"], lang),
                                          vat_amount=eur(m["vat"]), gross=eur(m["gross"])))
     else:
         totals.append(t["worked"].format(worked=fmt_duration(total)))

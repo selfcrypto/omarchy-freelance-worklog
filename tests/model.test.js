@@ -261,6 +261,20 @@ test("month lines", () => {
   assert.strictEqual(M.weekLine({ workedSec: 3600, targetSec: 0 }), "1h this week")
 })
 
+test("money summary: one line per kind of terms", () => {
+  const base = { targetSec: 48 * 3600, expectedSec: 30 * 3600, daysLeft: 5, billing: "package", currency: "€", standardRate: 60, overageRate: 60,
+    parts: [pkg("2026-10-21", "2026-11-20", 31, 48, 1800, 0)], livePart: 0 }
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 20 * 3600 }), 0)), { label: "Package · 37,50 €/h", amount: "1.800 €" })
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 50 * 3600 }), 0)), { label: "Package + extra · 38,40 €/h", amount: "1.920 €" })
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(Object.assign({}, base, { workedSec: 50 * 3600, waived: true }), 0)), { label: "Package · 36,00 €/h", amount: "1.800 €" })
+  const hourly = { targetSec: 0, expectedSec: 0, daysLeft: 3, billing: "hourly", currency: "€", workedSec: 10 * 3600, livePart: 0,
+    parts: [{ billing: "hourly", vatPercent: 21, standardRate: 60, fee: 0, workedSec: 10 * 3600 }] }
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(hourly, 0)), { label: "10h at 60 €/h", amount: "600 €" })
+  const none = { targetSec: 0, expectedSec: 0, daysLeft: 3, billing: "none", currency: "€", workedSec: 3600, livePart: 0,
+    parts: [{ billing: "none", vatPercent: 0, standardRate: 0, fee: 0, workedSec: 3600 }] }
+  assert.deepStrictEqual(M.moneySummary(M.cycleLive(none, 0)), { label: "No terms for this cycle", amount: "" })
+})
+
 test("open segment counts only for its company", () => {
   const v = view({ currentCompany: "c_a", active: { company: "c_b", closedSec: 0, pausedSec: 0, openStart: "2026-10-27T16:00:00Z" } })
   assert.strictEqual(M.weekLive(v, NOW).workedSec, 6 * 3600)
@@ -320,4 +334,29 @@ test("hourly cycle with two rates is not one rate", () => {
   assert.strictEqual(live.money.net, 180)
   assert.strictEqual(M.uniformHourly(live.money), false)
   assert.strictEqual(M.monthLine(live), "2h · 180 €")
+})
+
+// Found by the 0.3.0 review.
+
+test("half a cent rounds up, as worklog.py cents", () => {
+  const fig = { billing: "package", targetSec: 3600, standardRate: 50, livePart: 0,
+    parts: [{ from: "2026-10-01", to: "2026-10-31", days: 31, billing: "package", vatPercent: 10, standardRate: 50, fee: 10.05, workedSec: 0 }] }
+  const m = M.money(fig, 0)
+  assert.deepStrictEqual([m.vat, m.gross], [1.01, 11.06])
+})
+
+test("a live segment across a change of terms is billed on both sides", () => {
+  const part = (from, to, rate) => ({ from: from, to: to, days: 1, billing: "hourly", vatPercent: 0, standardRate: rate, fee: 0, workedSec: 0 })
+  const month = { billing: "hourly", targetSec: 0, expectedSec: 0, daysLeft: 3, currency: "€", workedSec: 0, livePart: 1,
+    startAt: "2026-09-30T22:00:00Z", parts: [part("2026-10-01", "2026-10-27", 50), part("2026-10-28", "2026-10-31", 100)] }
+  // 23:00 to 01:00 in Madrid: one hour at 50, one at 100.
+  const view = { state: "running", currentCompany: "c_0001", month: month,
+    active: { company: "c_0001", openStart: "2026-10-27T22:00:00Z" } }
+  assert.strictEqual(M.monthLive(view, Date.parse("2026-10-28T00:00:00Z")).money.net, 150)
+})
+
+test("a day row counts the live segment to the next local midnight", () => {
+  const view = { state: "running", active: { company: "c_0001", openStart: M.isoFromLocal("2026-03-29", 0) } }
+  // 29 March 2026 lasts 23 hours in Madrid.
+  assert.strictEqual(M.dayOpenSec({ company: "c_0001" }, view, Date.parse("2026-03-30T00:00:00Z"), "2026-03-29"), 23 * 3600)
 })

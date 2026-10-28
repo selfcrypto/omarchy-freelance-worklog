@@ -190,7 +190,9 @@ function weekLive(view, nowMs) {
   }
 }
 
-function round2(v) { return Math.round(v * 100) / 100 }
+// Half up to the cent, as worklog.py cents: the hundredths are rounded to six
+// places first, so 10,05 at 10 % (100.4999... hundredths in binary) gives 1,01.
+function round2(v) { return Math.floor(Number((v * 100).toFixed(6)) + 0.5) / 100 }
 
 // Same formula as worklog.py money(): what a cycle bills for `workedSec`.
 // The seconds the parts do not hold yet (the live segment) count in the
@@ -252,8 +254,15 @@ function money(fig, workedSec) {
 
 // A cycle's figures with the live segment added (the track page's month
 // card and the month page's package card). `fig` from the helper.
-function cycleLive(fig, openSecValue) {
+function cycleLive(fig, openSecValue, openByPart) {
   var worked = fig.workedSec + (openSecValue || 0)
+  // The live seconds per terms part, when known: a segment running across a
+  // change of terms is billed on both sides of it.
+  if (openByPart && fig.parts) {
+    fig = Object.assign({}, fig, { parts: fig.parts.map(function(p, k) {
+      return Object.assign({}, p, { workedSec: p.workedSec + (openByPart[k] || 0) })
+    }) })
+  }
   return {
     workedSec: worked,
     targetSec: fig.targetSec,
@@ -270,7 +279,16 @@ function cycleLive(fig, openSecValue) {
 }
 
 function monthLive(view, nowMs) {
-  return cycleLive(view.month, openSecMine(view, nowMs, view.month.startAt))
+  var open = openSecMine(view, nowMs, view.month.startAt)
+  return cycleLive(view.month, open, open > 0 ? openSecByPart(view.month, view, nowMs) : null)
+}
+
+// The live segment's seconds inside each terms part of a cycle; a part runs
+// from local midnight of its first day to local midnight after its last.
+function openSecByPart(fig, view, nowMs) {
+  return (fig.parts || []).map(function(p) {
+    return openSecBetween(view, nowMs, dayStartMs(p.from), dayStartMs(addDays(p.to, 1)))
+  })
 }
 
 // "9h 40m of 12h · 2h 20m left · 3 days left · 47m a day"; no guide: hours only.
@@ -310,6 +328,19 @@ function monthLine(live) {
   var diff = live.workedSec - live.targetSec
   if (Math.abs(diff) < 60) return head + " · done"
   return head + " · " + (diff > 0 ? "+" + fmtDuration(diff) + " over the package" : fmtDuration(-diff) + " short")
+}
+
+// The track page's money line: what the cycle invoices so far and how, as
+// { label, amount }; the month page shows the whole breakdown.
+function moneySummary(live) {
+  var m = live.money
+  var cur = live.currency
+  if (live.billing === "none") return { label: "No terms for this cycle", amount: "" }
+  if (live.billing === "package")
+    return { label: (m.overSec > 0 && !m.overageWaived ? "Package + extra" : "Package")
+      + (m.effectiveRate !== null ? " · " + fmtMoney(m.effectiveRate, cur, 2) + "/h" : ""), amount: fmtMoney(m.net, cur) }
+  if (uniformHourly(m)) return { label: fmtDuration(live.workedSec) + " at " + fmtMoney(m.lines[0].standardRate, cur) + "/h", amount: fmtMoney(m.net, cur) }
+  return { label: "To invoice", amount: fmtMoney(m.net, cur) + " + VAT" }
 }
 
 // ------------------------------------------------------------- cycles
@@ -505,6 +536,12 @@ function monthOpenSecBetween(month, view, nowMs, startMs, endMs) {
   return openSecBetween(view, nowMs, startMs, endMs)
 }
 
+// The live segment's seconds on one day of the month page, to the next local
+// midnight (a DST day lasts 23 or 25 hours).
+function dayOpenSec(month, view, nowMs, dateKey) {
+  return monthOpenSecBetween(month, view, nowMs, dayStartMs(dateKey), dayStartMs(addDays(dateKey, 1)))
+}
+
 // One column per day of the month page's cycle. Labels: the first day,
 // Mondays and the days new terms start; markers where terms start.
 function cycleDaySeries(month, view, nowMs) {
@@ -678,10 +715,12 @@ if (typeof module !== "undefined") {
     weekLive: weekLive,
     monthLive: monthLive,
     cycleLive: cycleLive,
+    openSecByPart: openSecByPart,
     money: money,
     weekLine: weekLine,
     paceLine: paceLine,
     monthLine: monthLine,
+    moneySummary: moneySummary,
     uniformHourly: uniformHourly,
     cycleBounds: cycleBounds,
     cycleOf: cycleOf,
@@ -698,6 +737,7 @@ if (typeof module !== "undefined") {
     sessionTip: sessionTip,
     cycleDaySeries: cycleDaySeries,
     monthOpenSecBetween: monthOpenSecBetween,
+    dayOpenSec: dayOpenSec,
     cycleWeekSeries: cycleWeekSeries,
     niceHours: niceHours,
     barHeight: barHeight,

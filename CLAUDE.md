@@ -20,7 +20,7 @@ present: `.private/` (git-ignored, never published).
 | `Panel.qml`, `SessionEditor.qml`, `TimeField.qml`, `KeyField.qml`, `WeekChart.qml` | Bar pill and the panel pages; the session form; text fields without Qt text controls; the bar chart |
 | `Model.js` | Formatting, live totals, cycles, money, chart series, editor checks (shared by the QML, tested under node) |
 | `worklog.py` | Single writer of the data files; every command prints one JSON line |
-| `tests/` | `test_worklog.py`, `test_companies.py` (helper), `model.test.js` (Model.js), `qml/` (KeyField, TimeField under qmltestrunner) |
+| `tests/` | `test_worklog.py`, `test_companies.py` (helper), `model.test.js` (Model.js), `qml/` (KeyField, TimeField under qmltestrunner), `paste/` (paste cap under `qs`) |
 
 ## Where things run
 

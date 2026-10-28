@@ -7,8 +7,8 @@ Omarchy bar plugin for freelance hours: one client or several, packages or hourl
 - Add time you did not track, including a session that is still running ("11:00-16:00, 17:00-now").
 - Companies with contract terms that change from any date: a monthly package (hours, fee, VAT, standard rate, extra hour rate) or hourly billing. A change in the middle of a cycle is prorated by days.
 - Billing cycles per company: the calendar month, or a month from any day (the 21st to the 20th).
-- The cycle against its terms with its pace, the price against the standard rate, extra hours billed or waived per cycle, this week by day, the last 8 weeks.
-- A month page with every day and its sessions (hover for details, click to edit, + to add time on a day); history by week.
+- The cycle against its terms with its pace and this week's hours, the price against the standard rate, extra hours billed or waived per cycle; an activity chart of this week by day or the last 8 weeks.
+- A month page with the package, one chart by day or by week, and every day with its sessions (hover for details, click to edit, + to add time on a day); history by week.
 - Reports for the client, weekly or monthly, in English or Spanish: Markdown, CSV and an HTML page that prints to PDF.
 
 ## Requirements
@@ -31,7 +31,7 @@ Run in a terminal, `plugin add` asks whether to enable it and in which bar secti
 | Pill, left click | Panel |
 | Pill, right click | Start, pause, resume |
 | Pill, middle click | End the session |
-| Panel | `space` start/pause, `e` end, `n` add time, `m` month, `h` history, `c` next company, `C` (or the gear) companies and terms, `esc` close |
+| Panel | `space` start/pause, `e` end, `d` discard, `n` add time, `m` month, `h` history, `a` activity week or 8 weeks, `c` next company, `C` (or the gear) companies and terms, `esc` close |
 
 Hyprland keys, in `~/.config/hypr/bindings.lua`:
 
