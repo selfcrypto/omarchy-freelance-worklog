@@ -682,14 +682,14 @@ Panel {
     radius: Math.min(Style.cornerRadius, height / 2)
     color: "transparent"
     border.width: 1
-    border.color: Util.alpha(root.foreground, 0.28)
+    border.color: Util.alpha(root.accent, 0.45)
 
     Text {
       id: capText
       anchors.centerIn: parent
       textFormat: Text.PlainText
       text: parent.label
-      color: root.dim
+      color: root.accent
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
     }
@@ -1172,7 +1172,7 @@ Panel {
         Text {
           anchors.centerIn: parent
           text: sessionRow.session.source === "manual" ? "󰏫" : "󰃭"
-          color: parent.today ? root.accent : root.dim
+          color: parent.today ? root.accent : Util.alpha(root.accent, 0.7)
           font.family: root.fontFamily
           font.pixelSize: Style.font.icon
         }
@@ -1481,7 +1481,8 @@ Panel {
                 anchors.verticalCenter: parent.verticalCenter
                 checked: root.sessionState === "running"
                 interactive: root.ready && root.sessionState !== "ending"
-                foreground: root.foreground
+                // On: the theme accent (the shell's selected color is often the text color).
+                foreground: checked ? root.accent : root.foreground
                 onToggled: root.primaryAction()
 
                 PanelToolTip {
@@ -1629,7 +1630,7 @@ Panel {
                   iconText: root.sessionState === "running" ? "󰏤" : (root.sessionState === "ending" ? "󰗠" : "󰐊")
                   active: true
                   bordered: true
-                  foreground: root.foreground
+                  foreground: root.accent
                   accent: root.accent
                   fontFamily: root.fontFamily
                   tooltipText: "Space"
@@ -1715,7 +1716,7 @@ Panel {
                 Text {
                   text: root.month ? Model.paceLine(root.month) : ""
                   textFormat: Text.PlainText
-                  color: root.month && root.month.balanceSec <= -15 * 60 ? root.urgent : root.foreground
+                  color: !root.month ? root.foreground : (root.month.balanceSec <= -15 * 60 ? root.urgent : (root.month.balanceSec >= 15 * 60 ? root.accent : root.foreground))
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
                   font.bold: true
@@ -1801,7 +1802,7 @@ Panel {
                 Text {
                   text: "All sessions  󰅂"
                   textFormat: Text.PlainText
-                  color: allMouse.containsMouse ? root.foreground : root.dim
+                  color: allMouse.containsMouse ? root.foreground : root.accent
                   font.family: root.fontFamily
                   font.pixelSize: Style.font.caption
 
@@ -1908,6 +1909,7 @@ Panel {
                 visible: root.activityRange === "weeks"
                 width: parent.width
                 series: root.view ? Model.weekSeries(root.view, root.nowMs) : []
+                pastMuted: true
                 target: root.week ? root.week.targetSec / 3600 : 0
                 targetLabel: root.week ? Model.fmtDuration(root.week.targetSec) : ""
                 foreground: root.foreground
@@ -2048,7 +2050,7 @@ Panel {
                   && root.monthFigures.elapsedDays > 0
                 text: root.monthLiveFig ? Model.paceLine(root.monthLiveFig) : ""
                 textFormat: Text.PlainText
-                color: root.monthLiveFig && root.monthLiveFig.balanceSec <= -15 * 60 ? root.urgent : root.foreground
+                color: !root.monthLiveFig ? root.foreground : (root.monthLiveFig.balanceSec <= -15 * 60 ? root.urgent : (root.monthLiveFig.balanceSec >= 15 * 60 ? root.accent : root.foreground))
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.body
                 font.bold: true
@@ -2209,6 +2211,7 @@ Panel {
                 width: parent.width
                 implicitHeight: Style.space(72)
                 series: root.monthWeekSeries
+                pastMuted: true
                 clickable: true
                 onColumnClicked: function(i) { root.revealWeek(i) }
                 target: root.monthCompany !== "all" ? root.monthGuideHours : 0
@@ -2645,7 +2648,7 @@ Panel {
                 iconText: "󰄬"
                 active: true
                 bordered: true
-                foreground: root.foreground
+                foreground: root.accent
                 accent: root.accent
                 fontFamily: root.fontFamily
                 tooltipText: "Ctrl+Enter"
@@ -2878,7 +2881,7 @@ Panel {
                 iconText: "󰄬"
                 active: true
                 bordered: true
-                foreground: root.foreground
+                foreground: root.accent
                 accent: root.accent
                 fontFamily: root.fontFamily
                 tooltipText: "Ctrl+Enter"

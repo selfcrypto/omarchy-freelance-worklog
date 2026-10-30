@@ -127,6 +127,29 @@ test("clock parsing", () => {
   assert.strictEqual(M.isoFromLocal("2026-07-01", 660), "2026-07-01T09:00:00Z")
 })
 
+test("time boxes place and drop the colon", () => {
+  // Typing 1, 7, 3, 0 one key at a time.
+  let t = ""
+  for (const k of "1730") t = M.autoColon(t + k, false)
+  assert.strictEqual(t, "17:30")
+  for (const k of "935") t = M.autoColon((t.length === 5 ? "" : t) + k, false)
+  assert.strictEqual(t, "9:35")
+  assert.strictEqual(M.autoColon("35", false), "3:5")
+  assert.strictEqual(M.autoColon("9", false), "9")
+  assert.strictEqual(M.autoColon("1730", false), "17:30")
+  // Backspace from "17:30" down to "": the colon goes with the minutes.
+  assert.strictEqual(M.autoColon("17:3", true), "17:3")
+  assert.strictEqual(M.autoColon("17:", true), "17")
+  assert.strictEqual(M.autoColon("17", true), "17")
+  // A separator typed after the automatic one is dropped.
+  assert.strictEqual(M.autoColon("17::", false), "17:")
+  assert.strictEqual(M.autoColon("17:.", false), "17:")
+  // Typed by hand: kept.
+  assert.strictEqual(M.autoColon("9:", false), "9:")
+  assert.strictEqual(M.autoColon("9.30", false), "9.30")
+  assert.strictEqual(M.autoColon("17h", false), "17h")
+})
+
 test("editor rows: 11-16 and 17-now", () => {
   const rows = [{ date: "2026-10-27", from: 660, to: 960 }, { date: "2026-10-27", from: 1020, to: -1, open: true }]
   const r = M.checkRows(rows, NOW, true)
@@ -135,6 +158,27 @@ test("editor rows: 11-16 and 17-now", () => {
   assert.strictEqual(r.pausedSec, 3600)
   assert.deepStrictEqual(r.segments[1], { start: "2026-10-27T16:00:00Z", end: null })
   assert.strictEqual(M.checkRows(rows, NOW, false).error, "only the last segment can run on")
+})
+
+test("editor rows: a start ahead of now on today began the day before", () => {
+  const early = Date.parse("2026-10-30T04:00:00Z") // Fri 05:00 Madrid
+  const d = "2026-10-30"
+  // 20:25 to now: Thu 20:25 to Fri 05:00.
+  const open = M.checkRows([{ date: d, from: 20 * 60 + 25, to: -1, open: true }], early, true)
+  assert.strictEqual(open.error, "")
+  assert.deepStrictEqual(open.segments, [{ start: "2026-10-29T19:25:00Z", end: null }])
+  assert.strictEqual(M.rowStartDate({ date: d, from: 1225, to: -1, open: true }, early), "2026-10-29")
+  // 22:00 to 02:00 past midnight: Thu 22:00 to Fri 02:00.
+  const night = M.checkRows([{ date: d, from: 22 * 60, to: 120 }], early, false)
+  assert.strictEqual(night.error, "")
+  assert.strictEqual(night.workedSec, 4 * 3600)
+  assert.strictEqual(night.first, "2026-10-29T21:00:00Z")
+  // Still refused: a segment that ends later today, and an end past now.
+  assert.match(M.checkRows([{ date: d, from: 20 * 60, to: 22 * 60 }], early, false).error, /future/)
+  assert.match(M.checkRows([{ date: d, from: 22 * 60, to: 6 * 60 }], early, false).error, /future/)
+  // Another day, or a start already past, keeps its day.
+  assert.strictEqual(M.rowStartDate({ date: "2026-10-29", from: 1225, to: -1, open: true }, early), "2026-10-29")
+  assert.strictEqual(M.rowStartDate({ date: d, from: 180, to: -1, open: true }, early), d)
 })
 
 test("editor rows: errors", () => {
@@ -391,4 +435,26 @@ test("the pace says it is the cycle's pace", () => {
   assert.strictEqual(M.paceLine({ balanceSec: -(2 * 3600 + 18 * 60) }), "2h 18m behind pace")
   assert.strictEqual(M.paceLine({ balanceSec: 3600 }), "1h ahead of pace")
   assert.strictEqual(M.paceLine({ balanceSec: 600 }), "on pace")
+})
+
+test("an hour typed alone parses with its automatic colon", () => {
+  assert.strictEqual(M.parseClock(M.autoColon("17", false)), 17 * 60)
+  assert.strictEqual(M.parseClock(M.autoColon("09", false)), 9 * 60)
+  assert.strictEqual(M.parseClock("17h"), 17 * 60)
+  assert.strictEqual(M.parseClock("17:4"), -1)
+})
+
+test("a start minutes ahead is refused, not moved a day back", () => {
+  const early = Date.parse("2026-10-30T04:00:00Z") // Fri 05:00 Madrid
+  const d = "2026-10-30"
+  const r = M.checkRows([{ date: d, from: 5 * 60 + 2, to: -1, open: true }], early, true)
+  assert.match(r.error, /future/, "got " + JSON.stringify(r))
+  // Either side of the minute's tolerance: no 24 h segment, never a negative one.
+  const a = M.checkRows([{ date: d, from: 5 * 60 + 1, to: -1, open: true }], early + 1000, true)
+  assert.strictEqual(a.workedSec, 0)
+  const b = M.checkRows([{ date: d, from: 5 * 60 + 1, to: -1, open: true }], early - 1000, true)
+  assert.match(b.error, /future/)
+  // The overnight case still goes to the day before.
+  assert.strictEqual(M.rowStartDate({ date: d, from: 13 * 60 + 1, to: -1, open: true }, early), "2026-10-29")
+  assert.strictEqual(M.rowStartDate({ date: d, from: 12 * 60 + 59, to: -1, open: true }, early), d)
 })

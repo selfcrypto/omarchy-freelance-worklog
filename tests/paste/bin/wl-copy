@@ -1,0 +1,6 @@
+#!/bin/sh
+# Records what the field copies: its arguments and its stdin. WLCOPY_FAIL set:
+# reads the text and exits 1, as a copy that never reached the clipboard.
+printf '%s\n' "$*" > "$WLCOPY_ARGS"
+cat > "$WLCOPY_OUT"
+[ -z "${WLCOPY_FAIL:-}" ]

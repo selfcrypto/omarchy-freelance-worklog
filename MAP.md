@@ -12,7 +12,7 @@
 | The month page | `worklog.py` (`cmd_month`), `Panel.qml` (`openMonth`, `loadMonth`, `monthRows`, month column) | `Model.js` (`cycleDaySeries`, `cycleWeekSeries`, `sessionTip`) |
 | A line of text in the panel | `Panel.qml`, formatting in `Model.js` (`weekLine`, `paceLine`, `cycleLeftLine`, `weekGuideLine`, `moneySummary`, `fmt*`) | `tests/model.test.js` |
 | A chart | `WeekChart.qml` (`markers`, `thinning`); series in `Model.js` (`daySeries`, `weekSeries`, `cycleDaySeries`, `cycleWeekSeries`) | |
-| The review or add/edit form | `SessionEditor.qml`, `TimeField.qml`; checks in `Model.js` (`checkRows`, `rowsFromSegments`) | `worklog.py` (`clean_segments`) must agree |
+| The review or add/edit form | `SessionEditor.qml`, `TimeField.qml`; checks in `Model.js` (`checkRows`, `rowStartDate`, `rowsFromSegments`) | `worklog.py` (`clean_segments`) must agree |
 | A panel page or key | `Panel.qml` (`go`, `keyCatcher` `Keys.onPressed`, page columns) | `footerKeys` (the fixed footer), `hero` |
 | The bar pill | `Panel.qml` (`WidgetButton`, `pillLabel`) | |
 | An IPC call | `Service.qml` (`IpcHandler`, target `worklog`) | `README.md` |
@@ -28,8 +28,8 @@
 | `Service.qml` | Owner of state, helper queue, automatic pauses, IPC, toasts |
 | `Panel.qml` | Bar pill and the panel: track, away, review, editor, history, month and companies pages; `MoneyBlock`, `CompanyChips` |
 | `SessionEditor.qml` | Summary, tags, segment rows with live totals; review, edit and new modes |
-| `TimeField.qml` | HH:MM field whose text is not bound to its minutes, so typing is never rewritten |
-| `KeyField.qml` | Text field without an editable Qt text control: plain Text with its own line layout (`wrapLines`), a caret bar, clicks by measured widths, dead keys, paste on Ctrl+V capped at 4096 bytes |
+| `TimeField.qml` | HH:MM field whose text is not bound to its minutes; selected by a focusing click, places the ":" as digits are typed (`Model.autoColon`) |
+| `KeyField.qml` | Text field without an editable Qt text control: plain Text with its own line layout (`wrapLines`), a caret bar, clicks by measured widths, selection (drag, Shift+keys, double click), dead keys, `keypadDigits` (time boxes), copy and cut through `wl-copy` stdin, paste capped at 4096 bytes |
 | `WeekChart.qml` | Column chart of Rectangles with an optional dashed target line and dashed markers |
 | `Model.js` | Pure helpers shared by the QML |
 | `worklog.py` | Data helper: storage, lifecycle, aggregation, exports |
@@ -65,4 +65,4 @@ v1 terms under `legacy`). The shell sends the whole list as JSON on stdin (`work
 | `tests/model.test.js` | Formatting, live totals, pace and money (prorated, hourly, mixed, extra hours), cycles (same cases as the helper), month page series, terms check, chart series, clock parsing, editor rows |
 | `tests/qml/tst_timefield.qml`, `tests/qml/tst_keyfield.qml` | Typing over a time keeps what is typed; KeyField typing, editing, limits, keys passed on, caret kept in view, dead keys, clicks placing the caret |
 | `tests/render/` | `run.sh` renders SessionEditor and WeekChart under `qs` (the shell's Commons and Ui linked in) at 280 and 400 px, dark and light, with long text; fails on anything past the edges, saves PNGs |
-| `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` (`bin/`): the copy stops early, 4096 bytes of UTF-8 kept |
+| `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` that offers text/html first (`bin/`): the UTF-8 text type is asked for, the copy stops early, 4096 bytes kept; a fake `wl-copy` gets a copy on stdin only, and a cut whose copy fails keeps the text |

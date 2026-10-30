@@ -414,6 +414,12 @@ Item {
               readonly property bool flagged: editor.check.error !== "" && editor.check.row === index
               // Days after its start day the segment ends (past midnight: 1).
               readonly property int endDays: { editor.revision; return Model.rowEndDays({ date: date, from: from, to: to, open: open, endIso: endIso }) }
+              // A start ahead of now on today began the day before: the row says so.
+              readonly property string startDay: {
+                editor.revision
+                var d = Model.rowStartDate({ date: date, from: from, to: to, open: open, startIso: startIso }, editor.nowMs)
+                return d !== date ? "started " + Model.dayLabel(d) : ""
+              }
               // A later row on another day than the first says which.
               readonly property string otherDay: { editor.revision; return index > 0 && date !== rowModel.get(0).date ? Model.dayLabel(date) : "" }
               readonly property int seconds: {
@@ -521,6 +527,7 @@ Item {
                   // Narrow rows lose the end first: the day, then the reason.
                   text: (segRow.seconds < 60 && !segRow.open ? "not counted" : Model.fmtDuration(segRow.seconds))
                     + (segRow.endReason !== "" && segRow.endReason !== "edited" && segRow.endReason !== "stop" && !segRow.open ? " · " + segRow.endReason : "")
+                    + (segRow.startDay !== "" ? " · " + segRow.startDay : "")
                     + (segRow.otherDay !== "" ? " · " + segRow.otherDay : "")
                   textFormat: Text.PlainText
                   elide: Text.ElideRight
@@ -572,14 +579,22 @@ Item {
         }
       }
 
-      // Totals, live.
+      // Totals, live. A start on another day than the page's (a start ahead of
+      // now moved to the day before) names that day; this line wraps, so it
+      // shows at any width.
       Text {
         width: parent.width
         horizontalAlignment: Text.AlignRight
         wrapMode: Text.WordWrap
-        text: editor.check.error ? "" : Model.fmtDuration(editor.check.workedSec) + " worked · "
-          + Model.fmtDuration(editor.check.pausedSec) + " paused · "
-          + Model.localHM(editor.check.first) + " – " + (editor.check.last ? Model.localHM(editor.check.last) : "now")
+        text: {
+          if (editor.check.error) return ""
+          var firstDay = Model.localDateKey(Model.parseIso(editor.check.first))
+          var pageDay = rowModel.count > 0 ? rowModel.get(0).date : firstDay
+          return Model.fmtDuration(editor.check.workedSec) + " worked · "
+            + Model.fmtDuration(editor.check.pausedSec) + " paused · "
+            + (firstDay !== pageDay ? Model.dayLabel(firstDay) + " " : "")
+            + Model.localHM(editor.check.first) + " – " + (editor.check.last ? Model.localHM(editor.check.last) : "now")
+        }
         textFormat: Text.PlainText
         color: editor.dim
         font.family: editor.fontFamily
@@ -607,7 +622,7 @@ Item {
         iconText: "󰄬"
         active: true
         bordered: true
-        foreground: editor.foreground
+        foreground: editor.accent
         accent: editor.accent
         fontFamily: editor.fontFamily
         tooltipText: "Ctrl+Enter"

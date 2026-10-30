@@ -39,7 +39,7 @@ present: `.private/` (git-ignored, never published).
 - Timestamps are stored UTC; days, weeks (Monday first) and months are local. Durations and amounts are never stored.
 - Terms belong to the data (companies, contract periods from a date), never to the widget settings; a cycle uses the terms of each of its days, prorated. Past cycles never change when new terms are added.
 - One currency per cycle; money is rounded half up to the cent, the same in `worklog.py` (`cents`) and `Model.js` (`round2`).
-- No editable Qt text control (TextInput, TextEdit, TextField): every field is a `KeyField`; the clipboard is read only on Ctrl+V, capped at 4096 bytes.
+- No editable Qt text control (TextInput, TextEdit, TextField): every field is a `KeyField`; the clipboard is read only on paste (capped at 4096 bytes) and written only on copy or cut, the text on `wl-copy`'s stdin.
 - Nothing resumes on its own after an automatic pause: the panel asks on return.
 - Every string from the data file is plain text, clipped before display; reports escape it (HTML, Markdown).
 - Colors and sizes come from `qs.Commons` (`Commons.Color`, `Style`); the panel follows the power-saving and wireguard panels.

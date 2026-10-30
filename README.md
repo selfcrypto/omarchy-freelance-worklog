@@ -13,7 +13,7 @@ Omarchy bar plugin for freelance hours: one client or several, packages or hourl
 
 ## Requirements
 
-Omarchy 4.0.5 or later (Quickshell 0.3, Qt 6.12), `python3` (standard library only) and `wl-paste` (wl-clipboard, for Ctrl+V in the text fields). All ship with Omarchy.
+Omarchy 4.0.5 or later (Quickshell 0.3, Qt 6.12), `python3` (standard library only), `wl-paste` and `wl-copy` (wl-clipboard, for paste and copy in the text fields). All ship with Omarchy.
 
 ## Install
 
@@ -32,6 +32,7 @@ Run in a terminal, `plugin add` asks whether to enable it and in which bar secti
 | Pill, right click | Start, pause, resume |
 | Pill, middle click | End the session |
 | Panel | `space` start/pause, `e` end, `d` discard, `n` add time, `m` month, `h` history, `a` activity week or 8 weeks, `c` next company, `C` (or the gear) companies and terms, `esc` close |
+| Text fields | Drag, Shift+arrows or a double click select; Ctrl+C, Ctrl+X, Ctrl+V (and Omarchy's Super+C/X/V) copy, cut and paste; Ctrl+arrows move by word |
 
 Hyprland keys, in `~/.config/hypr/bindings.lua`:
 
@@ -66,7 +67,7 @@ Removing the plugin keeps your data and reports. Delete `~/.local/share/omarchy-
 
 ## What it runs
 
-`python3 -I worklog.py --stdin` (the data helper, under `timeout`; its arguments go as JSON on stdin, so summaries, tags and terms never show in the process list), `omarchy-hyprland-session-locked` (lock detection), `omarchy-notification-send` (toasts), `omarchy-shell shell summon` (opens its own panel), and `wl-paste` only on Ctrl+V. No network access, no sudo, no other files written than the data folder and the reports.
+`python3 -I worklog.py --stdin` (the data helper, under `timeout`; its arguments go as JSON on stdin, so summaries, tags and terms never show in the process list), `omarchy-hyprland-session-locked` (lock detection), `omarchy-notification-send` (toasts), `omarchy-shell shell summon` (opens its own panel), `wl-paste` only on paste and `wl-copy` only on copy or cut (the text goes on its stdin). No network access, no sudo, no other files written than the data folder and the reports.
 
 ## License
 

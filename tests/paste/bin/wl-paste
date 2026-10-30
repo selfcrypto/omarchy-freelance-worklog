@@ -2,7 +2,14 @@
 # A clipboard owner that sends 8 MB with no newline, in 64 KB pieces, and
 # logs how much it got out before it was stopped (WLPASTE_PROGRESS).
 # WLPASTE_CHAR picks the character ("x", or "é" for two bytes of UTF-8).
+# It offers text/html first, as browsers do; the field must ask for the
+# UTF-8 text type (any other type gets nothing).
 import os, sys, time
+if "--list-types" in sys.argv:
+    print("text/html\ntext/plain;charset=utf-8\ntext/plain\nUTF8_STRING")
+    sys.exit(0)
+if sys.argv[sys.argv.index("--type") + 1] != "text/plain;charset=utf-8":
+    sys.exit(1)
 piece = (os.environ.get("WLPASTE_CHAR", "x") * 65536).encode()[:65536]
 sent = 0
 try:

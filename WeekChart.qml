@@ -7,8 +7,9 @@ import "Model.js" as Model
 // ({ label, readout, hours, state }), grown from one baseline, with an
 // optional dashed target line. Used for the days of the week and for the
 // last weeks. Colors are the theme's: the accent marks today, this week and
-// weeks that met the target; other bars are the foreground at 0.45, so on/off
-// never relies on hue and a monochrome theme still separates them.
+// weeks that met the target. Other days are the accent at 0.55; with
+// `pastMuted` (week charts) weeks under the target are the foreground at
+// 0.45, so they stay apart from the current week (the accent at 0.55).
 //
 // Hovering a column sets `readout` (the card header shows it); the whole
 // column is the hit target, wider than the bar. With `clickable` a click
@@ -23,6 +24,7 @@ Item {
   property var markers: []           // column indexes: a dashed line at the left edge
   property bool thinning: true       // drop every other label when columns are narrow
   property bool clickable: false     // columns answer clicks (columnClicked)
+  property bool pastMuted: false     // past bars in the foreground (weeks under target)
 
   signal columnClicked(int index)
   property color foreground: Commons.Color.popups.text
@@ -50,7 +52,8 @@ Item {
 
   function barColor(state, hovered) {
     if (state === "current" || state === "met" || state === "partial") return chart.accent
-    return Util.alpha(chart.foreground, hovered ? 0.62 : 0.45)
+    if (chart.pastMuted) return Util.alpha(chart.foreground, hovered ? 0.62 : 0.45)
+    return Util.alpha(chart.accent, hovered ? 0.75 : 0.55)
   }
 
   // Column backgrounds (hover) and bars.

@@ -180,3 +180,42 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 **Decision.** KeyField wraps its text itself (`wrapLines`: greedy word wrap measured with `FontMetrics.advanceWidth`, a word wider than the box cut anywhere, spaces kept at the end of the line they end) and shows the lines joined by newlines with Qt's wrapping off. The caret is a 2 px bar drawn over the text at the measured place; clicks (`positionAt`) and the scrolling that keeps the caret in view read the same line table. Replaces the caret character drawn into the text, the two caret probes and the click probe of the entries "KeyField scrolls to the caret", "Fixes from the 0.3.0 review" (caret) and "KeyField: dead keys and clicks" (clicks).
 **Why.** Kike: placing the caret inside a word showed a space ("Audit oría"), because the caret was a character as wide as any other. With Qt's own wrapping the field could only estimate where a character was (no positionAt on a Text, breaks inside URLs at `/`); with its own layout every position is known. A test clicks where the caret is drawn at every position of a text with a URL and gets the same position back.
 **Alternative rejected.** A narrower caret character: still shifts the text; and Qt text controls stay out (marketplace review).
+
+## 2026-10-30 · KeyField selects, copies and pastes
+**Decision.** KeyField keeps a selection anchor (`selectionAnchor`, -1 for none): a press places the caret, a drag past the system drag distance selects, Shift+click and Shift+arrows extend, a double click takes the word, Ctrl+arrows move by word, Up/Down by line, Home/End to the line's ends (Ctrl for the text's). Ctrl+C or Ctrl+Insert copies through `wl-copy --type text/plain;charset=utf-8` with the text on stdin; Ctrl+X or Shift+Delete cuts. Paste asks `wl-paste --list-types` first and reads the first of the UTF-8 text type, `text/plain`, `UTF8_STRING`, `STRING`, `TEXT`, each step under the 4096-byte cap. An anchor at the caret (left by a click) is dropped on release and before any edit. Failures to create the clipboard Process are logged, no longer swallowed.
+**Why.** Kike: no copy, no drag selection, paste unreliable in the forms. A live key log showed paste and copy working once wired, and a click leaving an anchor at the caret, so Enter selected the new line and the paste replaced it ("the paste goes there"). Omarchy's Super+C/V send Ctrl+Insert and Shift+Insert when a terminal is the active window. `wl-paste --type text` was rejected: it takes text/html when offered first.
+**Alternative rejected.** The shell's `Ui.TextField` (a Qt Quick Controls TextField): an editable Qt text control, a marketplace blocker (`KeyField instead of Qt text controls`). Text on `wl-copy`'s command line, as the shell's own panels do: data on argv.
+
+## 2026-10-30 · Theme accent on controls
+**Decision.** Primary buttons (Start, Save, Add, Confirm) and the run toggle when on get the accent as their foreground, so fill, border and label are accent; the pace reads in the accent when 15 min or more ahead; past chart bars are the accent at 0.45 (today, this week and met weeks full accent); Recent icons, the "All sessions" link and the footer key caps are accent.
+**Why.** Kike found the panel grey ("so boring"). The shell's selected color token defaults to the foreground, so `active` buttons and `ToggleSwitch` render grey on most themes. On/off still differs by alpha, not by hue alone.
+**Alternative rejected.** Restyling through the theme's `selected-color` token: a user setting, not the plugin's.
+
+## 2026-10-30 · Time boxes: a click selects, the keypad always types
+**Decision.** KeyField has `selectOnFocus` (on in TimeField): a click that brings focus selects the whole text, so typing replaces it; a second click places the caret. Keypad keys that arrive as navigation (`KeypadModifier` with End, Down, PageDown, Left, Clear, Right, Home, Up, PageUp, Insert, Delete) type their digit or "."; with Shift or Ctrl they stay navigation.
+**Why.** Kike: digits did nothing in a time box until NumLock was pressed twice. A click left the caret after a full "17:00" (5 of 5 characters), so every digit was refused; and the panel can be told NumLock is off while the keyboard has it on (fcitx5 runs here), which turns keypad 1 into End. Pressing NumLock twice resynced it.
+**Alternative rejected.** Asking Hyprland for the real NumLock state (`hyprctl devices`) on focus: a process per focus for a key that, in these fields, is always meant as a digit.
+
+## 2026-10-30 · Time boxes place the colon
+**Decision.** While digits are typed or deleted at the end of a time box, `Model.autoColon` puts the ":" after the hour ("17" to "17:", "35" to "3:5") and drops it when a deletion leaves it last ("17:3", Backspace: "17"); a separator typed right after it is dropped. Edits elsewhere in the box are left alone.
+**Why.** Kike asked for it. Tests: `tests/model.test.js` ("time boxes place and drop the colon"), `tests/qml/tst_timefield.qml`.
+**Alternative rejected.** A fixed `__:__` mask: the caret would jump over the colon and "9" alone could not mean 09:00.
+
+## 2026-10-30 · A start ahead of now on today began the day before
+**Decision.** `Model.rowStartDate`: a row on today's page whose start would be ahead of now starts the day before, when the row ends now or past midnight (20:25 to now at 05:00 runs from yesterday 20:25). The row's caption says "started <day>". A row that ends later today still gets "in the future".
+**Why.** Kike: "20:25 to now" at 05:00 was refused as in the future although only the day had changed. Mirrors the end before the start ending the next day.
+**Alternative rejected.** Moving any future start to yesterday: 20:00 to 22:00 at 05:00 more likely means another day picked with the arrows.
+
+## 2026-10-30 · Fixes from the 0.3.6 review
+**Decision.** Reviewed blind and in parallel by gpt-6-astra (medium) and a Claude Fable agent; every finding was reproduced on the unpushed 0.3.6 before fixing. Fixed, each with a test that failed before:
+- Cut removes the selection only after `wl-copy` exits 0 and if the text is unchanged (Astra). A failed copy is logged.
+- "17" then Tab gave an empty box: `parseClock` reads a trailing separator as the full hour ("17:", "17h"), and a box left with no time goes back to the time it had on focus, the row with it (both). Enter leaves the caret at the end of the formatted time (Fable).
+- End on a word cut by the wrap stays on its line (`caretUpstream`, also for clicks and Up/Down), and Up/Down keep the column across short lines (`preferredX`) (Astra).
+- `rowStartDate` moves a start to the day before only when the segment from there is at most 16 h (05:02 to now at 05:00 is a typo, not 24 h), and an open row starting within the minute's tolerance counts 0 (Fable).
+- Keypad digits only in time boxes (`keypadDigits`); the summary keeps keypad navigation with NumLock off (Fable). This narrows "Time boxes: a click selects, the keypad always types".
+- Text set from outside the field (a form reload) drops the selection (`setText` marks the field's own edits) (Fable).
+- A paste over a selected time is formatted at once: a deletion is a shorter text that starts the old one (Fable).
+- The started day shows in the totals line under the segments, which wraps, as well as in the row's caption, which elides at 280 px (Astra).
+- Week charts (`pastMuted`) show weeks under the target in the foreground at 0.45 again, apart from the current week; past days are the accent at 0.55 for contrast on light themes (Astra). This narrows "Theme accent on controls".
+**Why.** Both reviews found the "17:" regression; the rest came from one each.
+**Alternative rejected.** Kept as decided: the accent on the footer key caps and the Recent icons (Astra suggested neutral, as the siblings have; Kike asked for more accent: his call). `preventStealing` on the field stops a drag that starts on a text field from scrolling the panel (Fable, not checked live); selecting by drag needs it, the wheel still scrolls.

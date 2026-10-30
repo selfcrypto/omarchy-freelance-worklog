@@ -106,13 +106,28 @@ function weekRange(mondayKey) {
 
 // "11:00", "9", "930", "9.30" -> minutes after midnight, or -1.
 function parseClock(text) {
-  var t = String(text || "").trim().replace(/[.h]/, ":")
+  // A separator left last ("17:", "17h") means the full hour.
+  var t = String(text || "").trim().replace(/[.h]/, ":").replace(/:$/, "")
   var m = /^(\d{1,2})(?::?(\d{2}))?$/.exec(t)
   if (!m) return -1
   var h = Number(m[1])
   var min = m[2] === undefined ? 0 : Number(m[2])
   if (h > 23 || min > 59) return -1
   return h * 60 + min
+}
+
+// A time box's text as it is typed or deleted at its end: the ":" goes in
+// after the hour ("17" -> "17:", "173" -> "17:3"; an hour past 23 splits
+// early: "35" -> "3:5") and a ":" left last by a deletion goes ("17:3",
+// Backspace: "17"). A separator typed right after it is dropped ("17:" then
+// ":" stays "17:"). Anything else (".", "h", a ":" typed by hand) is kept.
+function autoColon(text, deleting) {
+  var t = String(text || "")
+  if (deleting) return /^\d{1,2}:$/.test(t) ? t.slice(0, -1) : t
+  if (/^\d{1,2}:[:.h]$/.test(t)) return t.slice(0, -1)
+  if (!/^\d{2,4}$/.test(t)) return t
+  if (Number(t.slice(0, 2)) > 23) return t[0] + ":" + t.slice(1)
+  return t.slice(0, 2) + ":" + t.slice(2)
 }
 
 // Local date key + minutes after midnight -> ISO instant (DST safe: the
@@ -645,6 +660,23 @@ function rowInstant(iso, dateKey, minutes, anyDate) {
   return parseIso(isoFromLocal(dateKey, minutes))
 }
 
+// The day a row starts on: its own, or the day before when the row is on
+// today, ends now or past midnight, its start would still be ahead, and the
+// segment from the day before is at most OVERNIGHT_MAX_SEC long (20:25 to
+// now at 05:00 started yesterday, as an end before the start ends the next
+// day; 05:02 to now at 05:00 is a typo, not 24 hours). A stored start keeps
+// its day.
+var OVERNIGHT_MAX_SEC = 16 * 3600
+function rowStartDate(row, nowMs) {
+  if (row.from < 0 || row.date !== localDateKey(nowMs)) return row.date
+  if (row.startIso && minutesOfDay(row.startIso) === row.from) return row.date
+  if (!row.open && !(row.to >= 0 && row.to < row.from)) return row.date
+  if (parseIso(isoFromLocal(row.date, row.from)) <= nowMs + 60000) return row.date
+  var before = addDays(row.date, -1)
+  var end = row.open ? nowMs : parseIso(isoFromLocal(row.date, row.to))
+  return end - parseIso(isoFromLocal(before, row.from)) <= OVERNIGHT_MAX_SEC * 1000 ? before : row.date
+}
+
 // Rows back to segments plus a verdict. An end earlier than the start on the
 // same row means the segment crosses midnight. Segments under a minute are
 // left out, as worklog.py does. Returns { segments, error, row, workedSec,
@@ -654,11 +686,12 @@ function checkRows(rows, nowMs, allowOpen) {
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i]
     if (r.from < 0) return { error: "start time missing", row: i }
-    var start = rowInstant(r.startIso, r.date, r.from, false)
+    var start = rowInstant(r.startIso, rowStartDate(r, nowMs), r.from, false)
     var end
     if (r.open) {
       if (!allowOpen || i !== rows.length - 1) return { error: "only the last segment can run on", row: i }
-      end = nowMs
+      // A start within the minute's tolerance ahead counts as now.
+      end = Math.max(nowMs, start)
     } else {
       if (r.to < 0) return { error: "end time missing", row: i }
       var untouchedEnd = !!r.endIso && minutesOfDay(r.endIso) === r.to
@@ -733,6 +766,8 @@ if (typeof module !== "undefined") {
     addDays: addDays,
     weekRange: weekRange,
     parseClock: parseClock,
+    rowStartDate: rowStartDate,
+    autoColon: autoColon,
     isoFromLocal: isoFromLocal,
     openSec: openSec,
     openSecBetween: openSecBetween,

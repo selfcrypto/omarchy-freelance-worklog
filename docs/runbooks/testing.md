@@ -5,9 +5,9 @@
 ```bash
 cd ~/Work/omarchy-freelance-worklog
 python3 -m unittest discover -s tests      # helper, 82 tests, ~20 s
-node --test tests/                         # Model.js, 30 tests (sets TZ=Europe/Madrid itself)
-QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 20 tests
-bash tests/paste/run.sh                    # KeyField paste: copy stopped early, 4096 bytes of UTF-8 kept (fake 8 MB clipboard, runs qs)
+node --test tests/                         # Model.js, 34 tests (sets TZ=Europe/Madrid itself)
+QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 33 tests
+bash tests/paste/run.sh                    # KeyField clipboard: UTF-8 text type, paste stopped early, 4096 bytes kept, copy on stdin, failed cut keeps the text (fakes in bin/, runs qs)
 bash tests/render/run.sh [png dir]         # session form and chart at 280/400 px, dark and light: nothing spills (runs qs)
 ```
 

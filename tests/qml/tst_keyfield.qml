@@ -34,7 +34,7 @@ Item {
     name: "KeyField"
     when: windowShown
 
-    function init() { line.text = ""; passed = []; edited.clear(); accepted.clear() }
+    function init() { line.text = ""; area.text = ""; passed = []; edited.clear(); accepted.clear() }
 
     function test_typing_and_editing() {
       line.forceActiveFocus()
@@ -207,15 +207,15 @@ Item {
       longWord.forceActiveFocus()
       wait(0)
       compare(longWord.scrolledY, 0)
-      keyClick(Qt.Key_End)
+      keyClick(Qt.Key_End, Qt.ControlModifier)
       wait(0)
       verify(longWord.scrolledY > 0, "end: " + longWord.scrolledY)
-      keyClick(Qt.Key_Up)
+      keyClick(Qt.Key_Home, Qt.ControlModifier)
       wait(0)
       compare(longWord.scrolledY, 0)
     }
 
-    // Up (start) in a long summary: its first line comes into view.
+    // Ctrl+Home in a long summary: its first line comes into view.
     function test_long_text_keeps_the_caret_line_in_view() {
       longArea.text = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen"
       longArea.cursorPosition = longArea.text.length
@@ -223,10 +223,163 @@ Item {
       wait(0)
       verify(longArea.height < 70, "box is capped: " + longArea.height)
       verify(longArea.caretViewY > 0 && longArea.caretViewY <= longArea.height, "end: " + longArea.caretViewY)
-      keyClick(Qt.Key_Up)
+      keyClick(Qt.Key_Home, Qt.ControlModifier)
       wait(0)
       compare(longArea.cursorPosition, 0)
       verify(longArea.caretViewY > 0 && longArea.caretViewY <= longArea.height, "start: " + longArea.caretViewY)
+    }
+    // Shift+arrows select; typing replaces the selection; Left drops it.
+    function test_keyboard_selection() {
+      clickLine.text = "hello world"
+      clickLine.forceActiveFocus()
+      clickLine.cursorPosition = 11
+      keyClick(Qt.Key_Left, Qt.ShiftModifier | Qt.ControlModifier)
+      compare(clickLine.selectedText, "world")
+      keyClick(Qt.Key_Left, Qt.ShiftModifier)
+      compare(clickLine.selectedText, " world")
+      keyClick(Qt.Key_Left)
+      verify(!clickLine.hasSelection)
+      compare(clickLine.cursorPosition, 5)
+      keyClick(Qt.Key_End, Qt.ShiftModifier)
+      keyClick(Qt.Key_X)
+      compare(clickLine.text, "hellox")
+      keyClick(Qt.Key_Home, Qt.ShiftModifier)
+      keyClick(Qt.Key_Backspace)
+      compare(clickLine.text, "")
+    }
+
+    // Press and drag selects; Shift+click extends; a double click takes a word.
+    function test_mouse_selection() {
+      clickLine.text = "hello world"
+      var y = clickLine.height / 2
+      tm.text = "he"
+      var x2 = clickLine.padding + tm.advanceWidth + 1
+      tm.text = "hello wo"
+      var x8 = clickLine.padding + tm.advanceWidth + 1
+      mousePress(clickLine, x2, y)
+      mouseMove(clickLine, x8, y)
+      mouseRelease(clickLine, x8, y)
+      compare(clickLine.selectedText, "llo wo")
+      mouseClick(clickLine, clickLine.padding + 1, y, Qt.LeftButton, Qt.ShiftModifier)
+      compare(clickLine.selectedText, "he")
+      mouseDoubleClickSequence(clickLine, x8, y)
+      compare(clickLine.selectedText, "world")
+      mouseClick(clickLine, x2, y)
+      verify(!clickLine.hasSelection)
+      // A click that moves a pixel or two selects nothing; Enter then types
+      // where the caret is.
+      mousePress(clickLine, x2, y)
+      mouseMove(clickLine, x2 + 2, y + 1)
+      mouseRelease(clickLine, x2 + 2, y + 1)
+      verify(!clickLine.hasSelection, "wobble selected " + JSON.stringify(clickLine.selectedText))
+      compare(clickLine.cursorPosition, 2)
+    }
+
+    // A click at the end, then Enter and a paste: the new line is not
+    // selected, so what comes next goes after it.
+    function test_click_then_enter_selects_nothing() {
+      area.text = "Hello?"
+      mouseClick(area, area.width - area.padding - 2, area.padding + 4)
+      compare(area.cursorPosition, 6)
+      keyClick(Qt.Key_Return, Qt.ShiftModifier)
+      verify(!area.hasSelection, "selected " + JSON.stringify(area.selectedText))
+      area.insert("Hello?")
+      compare(area.text, "Hello?\nHello?")
+      // The same with the anchor a press leaves while the button is down.
+      area.selectionAnchor = area.cursorPosition
+      area.insert("!")
+      verify(!area.hasSelection)
+      compare(area.text, "Hello?\nHello?!")
+    }
+
+    // Up and Down move a line in a multi-line box, keeping the column.
+    function test_lines_up_and_down() {
+      area.text = "abcd\nefgh\nij"
+      area.forceActiveFocus()
+      area.cursorPosition = 7
+      keyClick(Qt.Key_Up)
+      compare(area.cursorPosition, 2)
+      keyClick(Qt.Key_Down, Qt.ShiftModifier)
+      keyClick(Qt.Key_Down, Qt.ShiftModifier)
+      compare(area.cursorPosition, 12)
+      compare(area.selectedText, "cd\nefgh\nij")
+      keyClick(Qt.Key_Home)
+      compare(area.cursorPosition, 10)
+    }
+
+    // The summary keeps keypad navigation (NumLock off); time boxes type digits.
+    function test_keypad_in_summary() {
+      area.text = "ab\ncd"
+      area.forceActiveFocus()
+      area.cursorPosition = 1
+      keyClick(Qt.Key_Delete, Qt.KeypadModifier)
+      compare(area.text, "a\ncd")
+      keyClick(Qt.Key_Down, Qt.KeypadModifier)
+      compare(area.cursorPosition, 3)
+    }
+
+    // Down twice across a short line comes back to the column it left.
+    function test_vertical_moves_keep_the_column() {
+      area.text = "abcdefghij\nx\nabcdefghij"
+      area.forceActiveFocus()
+      area.cursorPosition = 8
+      keyClick(Qt.Key_Down)
+      compare(area.cursorPosition, 12)
+      keyClick(Qt.Key_Down)
+      compare(area.cursorPosition, 21)
+      keyClick(Qt.Key_Up, Qt.ShiftModifier)
+      keyClick(Qt.Key_Up, Qt.ShiftModifier)
+      compare(area.cursorPosition, 8)
+    }
+
+    // End on a word cut by the wrap stays on its line; typing goes there.
+    function test_end_stays_on_a_wrapped_word_line() {
+      longWord.text = "abcdefghijklmnopqrstuvwxyz".repeat(3)
+      longWord.forceActiveFocus()
+      longWord.cursorPosition = 0
+      keyClick(Qt.Key_End)
+      compare(longWord.caretLine, 0)
+      verify(longWord.cursorPosition > 0 && longWord.cursorPosition === longWord.lines[0].end)
+      var x = longWord.caretX
+      keyClick(Qt.Key_Home)
+      compare(longWord.cursorPosition, 0)
+      keyClick(Qt.Key_End, Qt.ShiftModifier)
+      compare(longWord.caretLine, 0)
+      compare(longWord.caretX, x)
+      // Right drops the selection at its end, then moves into the next line.
+      keyClick(Qt.Key_Right)
+      compare(longWord.caretLine, 0)
+      keyClick(Qt.Key_Right)
+      compare(longWord.caretLine, 1)
+      compare(longWord.cursorPosition, longWord.lines[1].start + 1)
+      // A click past the end of the first line lands at its end, on that line.
+      mouseClick(longWord, longWord.width - longWord.padding - 1, longWord.padding + 2)
+      compare(longWord.cursorPosition, longWord.lines[0].end)
+      compare(longWord.caretLine, 0)
+    }
+
+    // Text set from outside (a form reload) drops the selection.
+    function test_selection_after_external_text() {
+      area.text = "hello world"
+      area.forceActiveFocus()
+      area.cursorPosition = 0
+      keyClick(Qt.Key_End, Qt.ShiftModifier)
+      compare(area.selectedText, "hello world")
+      area.text = "other text!"
+      verify(!area.hasSelection, "selected " + JSON.stringify(area.selectedText))
+    }
+
+    // Ctrl+X takes the selection out (the copy itself runs under qs).
+    function test_cut_removes_the_selection() {
+      clickLine.text = "hello world"
+      clickLine.forceActiveFocus()
+      clickLine.cursorPosition = 5
+      keyClick(Qt.Key_End, Qt.ShiftModifier)
+      keyClick(Qt.Key_X, Qt.ControlModifier)
+      // No Quickshell here: the copy fails and the text stays.
+      compare(clickLine.text, "hello world")
+      keyClick(Qt.Key_Delete)
+      compare(clickLine.text, "hello")
     }
   }
 }
