@@ -80,11 +80,14 @@ Item {
           color: column.hovered ? Util.alpha(chart.foreground, 0.06) : "transparent"
         }
 
-        // Rounded data end, square at the baseline: a rounded bar with a
-        // square patch over its lower corners.
-        Item {
+        // Rounded data end, square at the baseline: one shape, so a translucent
+        // bar has one tone from end to end.
+        Rectangle {
           id: bar
           readonly property real r: Math.min(Style.space(4), width / 2)
+          topLeftRadius: r
+          topRightRadius: r
+          color: chart.barColor(column.modelData.state, column.hovered)
           width: chart.barWidth
           height: Model.barHeight(column.modelData.hours, chart.yMax, chart.plotHeight)
           anchors.horizontalCenter: parent.horizontalCenter
@@ -93,19 +96,6 @@ Item {
           opacity: column.modelData.state === "partial" && !column.hovered ? 0.55 : 1
 
           Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-
-          Rectangle {
-            anchors.fill: parent
-            radius: bar.r
-            color: chart.barColor(column.modelData.state, column.hovered)
-          }
-          Rectangle {
-            visible: bar.height > bar.r
-            width: parent.width
-            height: Math.min(bar.r, bar.height / 2)
-            anchors.bottom: parent.bottom
-            color: chart.barColor(column.modelData.state, column.hovered)
-          }
         }
 
         // Future days: a stub on the baseline, so the week reads as 7 slots.

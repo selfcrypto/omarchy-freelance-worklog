@@ -7,13 +7,13 @@ Budget 15 KB.
 
 | Thing | State |
 |---|---|
-| Version | 0.3.6 on `main`, tag v0.3.6, new `[Verify]` issue opened 2026-10-30; 0.3.5 is the published, verified version (#13095 closed) |
+| Version | 0.3.6 published and verified (#13348 closed). 0.3.7 committed locally, not pushed |
 | Tests | 82 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 34 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
 | Review | 0.3.6: gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel (4 + 7 findings, all reproduced, 9 fixed with tests; see decisions). Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
 
-1. 0.3.6 `[Verify]` issue open: push nothing but a release that retargets it (the target commit must stay last on main). The installed copy is already at 0.3.6.
+1. 0.3.7 (chart bars in one tone) is installed here and held: it goes out with the next real change, so the maintainer is not called for a cosmetic fix. Then push and open a new `[Verify]` issue; the release commit must stay last on main.
 2. Not yet checked live: the reminder toast, the light theme, chart clicks with a pointer.
 3. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
 
@@ -25,6 +25,7 @@ Budget 15 KB.
 
 ## Done
 
+- **2026-10-30.** 0.3.7: chart bars are one shape, so a translucent bar has one tone; the render check compares two pixels of a bar.
 - **2026-10-30.** 0.3.6: text fields select (drag, Shift+keys, double click on a word), copy, cut and paste with Ctrl or Omarchy's Super keys, move by word and by line; paste asks for the UTF-8 text type. A click into a time box selects it; keypad keys type digits in time boxes; the ":" comes and goes as digits are typed or deleted. On today's page a start later than now is the day before when the segment ends now or past midnight. Accent on the primary buttons, the run toggle when on, the chart bars, the pace when ahead, the Recent icons and the key caps. Checked live by Kike; reviewed by gpt-6-astra and Fable, fixes in decisions.
 - **2026-10-28.** 0.3.5: text fields draw the caret as a bar over the text (it used to be a character that pushed the text apart) and lay out their lines themselves.
 - **2026-10-28.** 0.3.4: text fields take accents typed with dead keys (´ then a: á) and place the caret where clicked.

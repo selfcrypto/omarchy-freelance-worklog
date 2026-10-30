@@ -428,7 +428,7 @@ An HH:MM field for the session editor, on KeyField (no editable Qt text
 - signal minutesEdited L19: Minutes after midnight as typed (-1 while incomplete or invalid).
 - function format L21
 
-## WeekChart.qml (222 lines)
+## WeekChart.qml (212 lines)
 A column chart drawn with Rectangles: one bar per entry of `series`
 - property series L20
 - property target L21
@@ -478,20 +478,20 @@ KeyField: typing without an editable Qt text control. Run:
 ## tests/qml/tst_timefield.qml (133 lines)
 TimeField keeps what is typed (review 2026-10-27). Run:
 
-## tests/render/render.qml (133 lines)
+## tests/render/render.qml (138 lines)
 Render check for the session form and the chart (run.sh): each case at a
-- property outDir L11
-- property palettes L12
-- property widths L15
-- property companies L16
-- property segments L19
-- property summary L23
-- property failures L24
-- property index L25
-- function spills L75: Every visible item inside the card, outside clipped parents.
-- function runCase L93
+- property outDir L12
+- property palettes L13
+- property widths L16
+- property companies L17
+- property segments L20
+- property summary L24
+- property failures L25
+- property index L26
+- function spills L76: Every visible item inside the card, outside clipped parents.
+- function runCase L94
 
-## tests/render/run.sh (21 lines)
+## tests/render/run.sh (30 lines)
 Render check of the session form and the chart under Quickshell:
 
 ## tests/test_companies.py (611 lines)

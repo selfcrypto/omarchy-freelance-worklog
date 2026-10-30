@@ -5,7 +5,8 @@ import "Model.js" as Model
 // Render check for the session form and the chart (run.sh): each case at a
 // narrow and a wide width, in a dark and a light palette, with long text.
 // Fails when a visible item spills past the card's edges outside a clipped
-// area, and saves every case as a PNG to look at.
+// area or a chart bar shows two tones, and saves every case as a PNG to look
+// at.
 ShellRoot {
   id: root
   property string outDir: Quickshell.env("RENDER_OUT")
@@ -121,6 +122,10 @@ ShellRoot {
       var bad = root.spills(card, [])
       for (var i = 0; i < bad.length; i++) root.failures.push(name + ": " + bad[i])
       console.log("RENDER case " + name + " spills=" + bad.length)
+      // Two points inside the first tall bar, for run.sh: near the baseline
+      // and above the corners' reach. A bar has one tone.
+      var low = chart.mapToItem(card, chart.columnWidth * 1.5, chart.plotHeight - 3)
+      console.log("RENDER bar " + name + " " + Math.round(low.x) + " " + Math.round(low.y) + " " + Math.round(low.y - 8))
       card.grabToImage(function(r) {
         if (root.outDir !== "") r.saveToFile(root.outDir + "/" + name + ".png")
         root.index++

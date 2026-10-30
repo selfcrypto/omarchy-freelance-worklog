@@ -8,7 +8,7 @@ python3 -m unittest discover -s tests      # helper, 82 tests, ~20 s
 node --test tests/                         # Model.js, 34 tests (sets TZ=Europe/Madrid itself)
 QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 33 tests
 bash tests/paste/run.sh                    # KeyField clipboard: UTF-8 text type, paste stopped early, 4096 bytes kept, copy on stdin, failed cut keeps the text (fakes in bin/, runs qs)
-bash tests/render/run.sh [png dir]         # session form and chart at 280/400 px, dark and light: nothing spills (runs qs)
+bash tests/render/run.sh [png dir]         # session form and chart at 280/400 px, dark and light: nothing spills, a bar has one tone (runs qs, magick)
 ```
 
 ## Static

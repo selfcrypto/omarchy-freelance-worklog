@@ -219,3 +219,8 @@ Kike: "Thinking about changing the name to Freelance Worklog". The name says who
 - Week charts (`pastMuted`) show weeks under the target in the foreground at 0.45 again, apart from the current week; past days are the accent at 0.55 for contrast on light themes (Astra). This narrows "Theme accent on controls".
 **Why.** Both reviews found the "17:" regression; the rest came from one each.
 **Alternative rejected.** Kept as decided: the accent on the footer key caps and the Recent icons (Astra suggested neutral, as the siblings have; Kike asked for more accent: his call). `preventStealing` on the field stops a drag that starts on a text field from scrolling the panel (Fable, not checked live); selecting by drag needs it, the wheel still scrolls.
+
+## 2026-10-30 · Chart bars are one shape
+**Decision.** A bar is one `Rectangle` with `topLeftRadius` and `topRightRadius`. Replaces the rounded bar with a square patch over its lower corners in `Charts drawn with Rectangles`. `tests/render/run.sh` compares two pixels of a bar.
+**Why.** Kike saw a more solid strip at the foot of the bars: the patch overlapped the bar, and two translucent shapes add up.
+**Alternative rejected.** Solid children under an opacity on the parent: Qt applies opacity to each child, so the overlap stays unless the bar becomes a layer.
