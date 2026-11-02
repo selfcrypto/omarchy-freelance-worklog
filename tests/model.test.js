@@ -207,6 +207,54 @@ test("labels and tags", () => {
   assert.strictEqual(M.localHM("2026-10-27T13:02:00Z"), "14:02")
 })
 
+test("a start moved past its stored end is an error, not a lost segment", () => {
+  const rows = M.rowsFromSegments([{ start: "2026-10-27T09:00:00Z", end: "2026-10-27T10:00:00Z", endReason: "manual" },
+    { start: "2026-10-27T10:30:00Z", end: "2026-10-27T11:00:00Z", endReason: "stop" }])
+  rows[0].from = 11 * 60 + 10
+  const r = M.checkRows(rows, NOW, false)
+  assert.strictEqual(r.error, "segment 1 ends before it starts")
+  assert.strictEqual(r.row, 0)
+})
+
+test("a live session keeps every segment, seconds included", () => {
+  const segs = [{ start: "2026-10-27T09:00:00Z", end: "2026-10-27T09:00:00Z", endReason: "manual" },
+    { start: "2026-10-27T09:10:00Z", end: "2026-10-27T09:10:30Z", endReason: "manual" },
+    { start: "2026-10-27T09:20:15Z", end: null }]
+  const r = M.checkRows(M.rowsFromSegments(segs), NOW, true, "running")
+  assert.strictEqual(r.error, "")
+  assert.strictEqual(r.segments.length, 3)
+  assert.strictEqual(r.segments[1].end, "2026-10-27T09:10:30Z")
+  assert.strictEqual(r.segments[2].start, "2026-10-27T09:20:15Z")
+  assert.strictEqual(r.segments[2].end, null)
+  // The same rows outside a live session lose the short ones.
+  assert.strictEqual(M.checkRows(M.rowsFromSegments(segs), NOW, true).segments.length, 1)
+})
+
+test("a new row starts on the first minute free after the last end", () => {
+  const rows = M.rowsFromSegments([{ start: "2026-10-27T09:00:00Z", end: "2026-10-27T10:14:37Z", endReason: "manual" }])
+  assert.strictEqual(M.rowNextMinute(rows[0]), rows[0].to + 1)
+  const whole = M.rowsFromSegments([{ start: "2026-10-27T09:00:00Z", end: "2026-10-27T10:14:00Z", endReason: "manual" }])
+  assert.strictEqual(M.rowNextMinute(whole[0]), whole[0].to)
+  // An edited end is a whole minute.
+  rows[0].to = 700
+  assert.strictEqual(M.rowNextMinute(rows[0]), 700)
+})
+
+test("a running session keeps its last segment open", () => {
+  const closed = M.rowsFromSegments([{ start: "2026-10-27T09:00:00Z", end: "2026-10-27T10:00:00Z", endReason: "manual" }])
+  const r = M.checkRows(closed, NOW, true, "running")
+  assert.strictEqual(r.error, "the running segment must stay open")
+  assert.strictEqual(r.row, 0)
+  assert.strictEqual(M.checkRows(closed, NOW, false, "paused").error, "")
+})
+
+test("moving a running start earlier keeps it open", () => {
+  const rows = M.rowsFromSegments([{ start: "2026-10-27T16:10:00Z", end: null }])
+  rows[0].from = 17 * 60
+  const r = M.checkRows(rows, NOW, true, "running")
+  assert.deepStrictEqual(r.segments, [{ start: "2026-10-27T16:00:00Z", end: null }])
+})
+
 test("seconds survive an untouched row; short segments are left out", () => {
   const segs = [{ start: "2026-10-27T17:28:26Z", end: "2026-10-27T17:28:28Z", endReason: "manual" },
     { start: "2026-10-27T17:28:30Z", end: "2026-10-27T17:29:50Z", endReason: "stop" }]

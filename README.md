@@ -31,7 +31,7 @@ Run in a terminal, `plugin add` asks whether to enable it and in which bar secti
 | Pill, left click | Panel |
 | Pill, right click | Start, pause, resume |
 | Pill, middle click | End the session |
-| Panel | `space` start/pause, `e` end, `d` discard, `n` add time, `m` month, `h` history, `a` activity week or 8 weeks, `c` next company, `C` (or the gear) companies and terms, `esc` close |
+| Panel | `space` start/pause, `enter` edit the session (running or paused), `e` end, `d` discard, `n` add time, `m` month, `h` history, `a` activity week or 8 weeks, `c` next company, `C` (or the gear) companies and terms, `esc` close |
 | Text fields | Drag, Shift+arrows or a double click select; Ctrl+C, Ctrl+X, Ctrl+V (and Omarchy's Super+C/X/V) copy, cut and paste; Ctrl+arrows move by word |
 
 Hyprland keys, in `~/.config/hypr/bindings.lua`:

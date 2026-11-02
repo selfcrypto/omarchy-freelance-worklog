@@ -225,6 +225,13 @@ Item {
     return "ok"
   }
 
+  // The form's save on a live session: times, draft and company in one write.
+  // base: the session's editBase when the form opened; a changed session is refused.
+  function editActive(base, segments, summary, tags, company, done) {
+    run(["edit-active", "--base", String(base), "--segments", JSON.stringify(segments), "--summary", String(summary || ""), "--tags", String(tags || "")]
+      .concat(company ? ["--company", String(company)] : []), done)
+  }
+
   // The current company; with a live session, the session moves to it too.
   function useCompany(company, done) {
     if (view && view.active && sessionState !== "idle") run(["edit-active", "--company", String(company)], done)
@@ -384,7 +391,8 @@ Item {
       // the local date changes, whatever the session state.
       var day = Model.localDateKey(now)
       if (root.view && day !== root.view.today.date && !root.pending && root.queue.length === 0) root.refresh()
-      if (root.prompt) root.prompt = Object.assign({}, root.prompt, { awaySec: root.pauseSec })
+      // An edit can move the end of the paused segment under the prompt.
+      if (root.prompt && root.view.active) root.prompt = Object.assign({}, root.prompt, { awaySec: root.pauseSec, since: root.view.active.lastEnd })
       root.remind(now)
     }
   }

@@ -554,6 +554,161 @@ class Helper(unittest.TestCase):
         self.assertNotIn("private", r["error"])
         self.assertNotIn("tttt", r["error"])
 
+    # -------------------------------------------------------------- live edit
+
+    def base(self, now):
+        return self.run_cmd("view", now=now)["view"]["active"]["editBase"]
+
+    def files(self):
+        out = []
+        for name in ("worklog.json", "active.json"):
+            path = os.path.join(self.dir, name)
+            out.append(open(path).read() if os.path.exists(path) else None)
+        return out
+
+    def test_edit_active_moves_a_running_start_earlier(self):
+        sid = self.run_cmd("start", now="2026-10-27T08:10:00Z")["view"]["active"]["id"]
+        base = self.base("2026-10-27T08:15:00Z")
+        v = self.run_cmd("edit-active", "--base", base, "--segments", json.dumps([{"start": "2026-10-27T08:00:00Z", "end": None}]),
+                         now="2026-10-27T08:15:00Z")["view"]
+        self.assertEqual(v["state"], "running")
+        self.assertEqual(v["active"]["id"], sid)
+        self.assertEqual(v["active"]["openStart"], "2026-10-27T08:00:00Z")
+        self.assertEqual(self.active()["heartbeatAt"], "2026-10-27T08:15:00Z")
+        v = self.run_cmd("pause", now="2026-10-27T08:20:00Z")["view"]
+        self.assertEqual(v["today"]["workedSec"], 1200)
+
+    def test_edit_active_keeps_a_paused_session_paused(self):
+        self.run_cmd("start", now="2026-10-27T08:00:00Z")
+        self.run_cmd("pause", "--reason", "idle", "--at", "2026-10-27T08:45:00Z", now="2026-10-27T09:00:00Z")
+        before = self.active()
+        v = self.run_cmd("edit-active", "--segments", json.dumps([{"start": "2026-10-27T08:00:00Z", "end": "2026-10-27T08:55:00Z"}]),
+                         now="2026-10-27T09:01:00Z")["view"]
+        self.assertEqual(v["state"], "paused")
+        self.assertEqual(v["pauseReason"], "idle")
+        self.assertEqual(v["announced"], before["announced"])
+        self.assertEqual(v["active"]["closedSec"], 3300)
+        v = self.run_cmd("resume", now="2026-10-27T09:02:00Z")["view"]
+        self.assertEqual(len(v["active"]["segments"]), 2)
+
+    def stale_save(self, form_base, form_segments, now):
+        before = self.files()
+        r = self.run_cmd("edit-active", "--base", form_base, "--segments", json.dumps(form_segments), now=now, ok=False)
+        self.assertEqual(r["field"], "segments")
+        self.assertEqual(self.files(), before)
+
+    def test_stale_form_cannot_undo_a_pause(self):
+        # Without the check the gap counts as work: 30 minutes billed from nothing.
+        self.run_cmd("start", now="2026-10-27T08:00:00Z")
+        base = self.base("2026-10-27T08:01:00Z")
+        self.run_cmd("pause", now="2026-10-27T09:00:00Z")
+        self.run_cmd("resume", now="2026-10-27T09:30:00Z")
+        self.stale_save(base, [{"start": "2026-10-27T08:00:00Z", "end": None}], "2026-10-27T10:00:00Z")
+
+    def test_stale_form_cannot_erase_later_work(self):
+        # Same id and same state as the form, later work in the file.
+        self.run_cmd("start", now="2026-10-27T10:00:00Z")
+        v = self.run_cmd("pause", now="2026-10-27T10:00:30Z")["view"]
+        base, segments = v["active"]["editBase"], v["active"]["segments"]
+        self.run_cmd("resume", now="2026-10-27T10:10:00Z")
+        self.run_cmd("pause", now="2026-10-27T10:20:00Z")
+        self.stale_save(base, segments, "2026-10-27T10:30:00Z")
+
+    def test_stale_form_cannot_land_on_a_new_session(self):
+        v = self.run_cmd("start", now="2026-10-27T09:00:00Z")["view"]
+        base, segments = v["active"]["editBase"], v["active"]["segments"]
+        self.run_cmd("discard", now="2026-10-27T09:10:00Z")
+        self.run_cmd("start", now="2026-10-27T09:20:00Z")
+        self.stale_save(base, segments, "2026-10-27T09:30:00Z")
+
+    def test_stale_form_refused_after_a_draft_or_company_change(self):
+        v = self.run_cmd("start", now="2026-10-27T09:00:00Z")["view"]
+        base, segments = v["active"]["editBase"], v["active"]["segments"]
+        self.run_cmd("draft", "--summary", "written elsewhere", now="2026-10-27T09:01:00Z")
+        self.stale_save(base, segments, "2026-10-27T09:02:00Z")
+        base = self.base("2026-10-27T09:02:00Z")
+        other = self.run_cmd("company", "--action", "add", "--name", "Other", "--tag", "OT", now="2026-10-27T09:03:00Z")
+        other_id = [c["id"] for c in other["view"]["companies"] if c["name"] == "Other"][0]
+        self.run_cmd("edit-active", "--company", other_id, now="2026-10-27T09:04:00Z")
+        self.stale_save(base, segments, "2026-10-27T09:05:00Z")
+
+    def test_a_heartbeat_does_not_make_a_form_stale(self):
+        self.run_cmd("start", "--boot-id", "b1", now="2026-10-27T09:00:00Z")
+        base = self.base("2026-10-27T09:00:00Z")
+        self.run_cmd("heartbeat", now="2026-10-27T09:01:00Z")
+        self.run_cmd("announce", now="2026-10-27T09:01:30Z")
+        self.run_cmd("edit-active", "--base", base, "--segments", json.dumps([{"start": "2026-10-27T08:50:00Z", "end": None}]),
+                     now="2026-10-27T09:02:00Z")
+
+    def test_edit_active_writes_the_draft_with_the_times(self):
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        self.run_cmd("edit-active", "--segments", json.dumps([{"start": "2026-10-27T08:50:00Z", "end": None}]),
+                     "--summary", "Fixing the invoice", "--tags", "backend, review", now="2026-10-27T09:05:00Z")
+        self.assertEqual(self.active()["draft"], {"summary": "Fixing the invoice", "tags": ["backend", "review"]})
+        self.run_cmd("edit-active", "--summary", "", now="2026-10-27T09:06:00Z")
+        self.assertEqual(self.active()["draft"]["summary"], "")
+        self.assertEqual(self.run_cmd("edit-active", now="2026-10-27T09:07:00Z", ok=False)["error"], "nothing to change")
+
+    def test_edit_active_refused_saves_nothing(self):
+        self.run_cmd("add", "--segments", json.dumps([{"start": "2026-10-27T07:00:00Z", "end": "2026-10-27T08:00:00Z"}]),
+                     "--summary", "Earlier", now="2026-10-27T08:05:00Z")
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        before = self.files()
+        r = self.run_cmd("edit-active", "--summary", "Should not land", "--segments", json.dumps([{"start": "2026-10-27T07:30:00Z", "end": None}]),
+                         now="2026-10-27T09:05:00Z", ok=False)
+        self.assertIn("overlaps", r["error"])
+        self.assertEqual(self.files(), before)
+
+    def test_edit_active_keeps_the_shape_of_the_state(self):
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        closed = [{"start": "2026-10-27T09:00:00Z", "end": "2026-10-27T09:04:00Z"}]
+        r = self.run_cmd("edit-active", "--segments", json.dumps(closed), now="2026-10-27T09:05:00Z", ok=False)
+        self.assertIn("keeps its last segment open", r["error"])
+        self.run_cmd("pause", now="2026-10-27T09:06:00Z")
+        r = self.run_cmd("edit-active", "--segments", json.dumps([{"start": "2026-10-27T09:00:00Z", "end": None}]), now="2026-10-27T09:07:00Z", ok=False)
+        self.assertIn("has no end", r["error"])
+
+    def test_edit_active_keeps_short_and_empty_segments(self):
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        v = self.run_cmd("pause", now="2026-10-27T09:00:00Z")["view"]
+        self.assertEqual(v["active"]["segments"][0]["start"], v["active"]["segments"][0]["end"])
+        v = self.run_cmd("edit-active", "--segments", json.dumps(v["active"]["segments"]), now="2026-10-27T09:05:00Z")["view"]
+        self.assertEqual(len(v["active"]["segments"]), 1)
+        self.run_cmd("resume", now="2026-10-27T09:06:00Z")
+        v = self.run_cmd("pause", now="2026-10-27T09:06:30Z")["view"]
+        self.assertEqual(len(v["active"]["segments"]), 2)
+        v = self.run_cmd("edit-active", "--segments", json.dumps(v["active"]["segments"]), now="2026-10-27T09:07:00Z")["view"]
+        self.assertEqual(len(v["active"]["segments"]), 2)
+        backwards = [{"start": "2026-10-27T09:06:00Z", "end": "2026-10-27T09:05:00Z"}]
+        self.run_cmd("edit-active", "--segments", json.dumps(backwards), now="2026-10-27T09:08:00Z", ok=False)
+
+    def test_edit_active_time_ahead_of_now_is_stored_as_now(self):
+        # A start inside the minute's tolerance, then a crash: the segment must
+        # not sit ahead of the heartbeat, and confirm must still pass.
+        self.run_cmd("start", "--boot-id", "b1", now="2026-10-27T08:00:00Z")
+        v = self.run_cmd("edit-active", "--segments", json.dumps([{"start": "2026-10-27T08:01:00Z", "end": None}]), now="2026-10-27T08:00:30Z")["view"]
+        self.assertEqual(v["active"]["openStart"], "2026-10-27T08:00:30Z")
+        self.run_cmd("recover", "--boot-id", "b2", now="2026-10-27T08:05:00Z")
+        self.run_cmd("resume", now="2026-10-27T08:06:00Z")
+        self.run_cmd("stop", now="2026-10-27T08:30:00Z")
+        self.run_cmd("confirm", "--summary", "Recovered", now="2026-10-27T08:31:00Z")
+        self.assertEqual(len(self.log()["sessions"][0]["segments"]), 1)
+
+    def test_confirm_drops_an_empty_segment(self):
+        # What the panel's form does; the saved rows of the IPC confirm too.
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        self.run_cmd("pause", now="2026-10-27T09:00:00Z")
+        self.run_cmd("resume", now="2026-10-27T09:10:00Z")
+        self.run_cmd("stop", now="2026-10-27T09:30:00Z")
+        self.run_cmd("confirm", "--summary", "Work", now="2026-10-27T09:31:00Z")
+        self.assertEqual(len(self.log()["sessions"][0]["segments"]), 1)
+
+    def test_a_session_of_empty_segments_stays_refused_at_confirm(self):
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        self.run_cmd("stop", now="2026-10-27T09:00:00Z")
+        r = self.run_cmd("confirm", "--summary", "Nothing", now="2026-10-27T09:01:00Z", ok=False)
+        self.assertIn("nothing worked", r["error"])
+
 
 if __name__ == "__main__":
     unittest.main()

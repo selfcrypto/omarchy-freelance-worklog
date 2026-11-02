@@ -4,11 +4,11 @@
 
 ```bash
 cd ~/Work/omarchy-freelance-worklog
-python3 -m unittest discover -s tests      # helper, 82 tests, ~20 s
-node --test tests/                         # Model.js, 34 tests (sets TZ=Europe/Madrid itself)
+python3 -m unittest discover -s tests      # helper, 96 tests, ~25 s
+node --test tests/                         # Model.js, 39 tests (sets TZ=Europe/Madrid itself)
 QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 33 tests
 bash tests/paste/run.sh                    # KeyField clipboard: UTF-8 text type, paste stopped early, 4096 bytes kept, copy on stdin, failed cut keeps the text (fakes in bin/, runs qs)
-bash tests/render/run.sh [png dir]         # session form and chart at 280/400 px, dark and light: nothing spills, a bar has one tone (runs qs, magick)
+bash tests/render/run.sh [png dir]         # session form (confirmed and running session) and chart at 280/400 px, dark and light: nothing spills, a bar has one tone, the live form keeps its running row (runs qs, magick)
 ```
 
 ## Static
@@ -39,7 +39,7 @@ Ask the user before these, they take the screen or keyboard:
 1. Lock (`omarchy-shell lock lock`) while running: paused with `lock`, pill pulses; unlock: away page opens.
 2. Idle: `omarchy bar set io.github.selfcrypto.worklog idlePauseMinutes 1`, hands off 70 s: paused back-dated; touch the mouse: away page. Set it back to 15.
 3. Suspend and wake: paused at the last tick, away page after unlock.
-4. Forms: Tab walks the fields, Ctrl+Enter submits, Esc leaves a field then the page.
+4. Forms: Tab walks the fields, Ctrl+Enter submits, Esc leaves a field then the page. Live session: Enter on the track page opens the form, Save returns to track, the clock moves with the start; pause from the pill while the form is open and the panel returns to track.
 5. Theme switch and the second monitor (`grim -o DP-2`).
 
 Screenshot of the panel: `grim -o "$(hyprctl -j monitors | jq -r '.[]|select(.focused).name')" shot.png`.

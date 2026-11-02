@@ -652,6 +652,12 @@ function rowEndDays(row) {
   return row.to < row.from ? 1 : 0
 }
 
+// The first whole minute free after a row: a stored end has seconds, and the
+// minute it falls in would overlap it.
+function rowNextMinute(row) {
+  return row.to + (row.endIso && minutesOfDay(row.endIso) === row.to && parseIso(row.endIso) % 60000 ? 1 : 0)
+}
+
 // The stored instant when the row still shows its minutes, else the wall
 // time the row says. An end keeps its own date (a segment can run past
 // midnight or for days), so only its minutes are compared.
@@ -679,9 +685,11 @@ function rowStartDate(row, nowMs) {
 
 // Rows back to segments plus a verdict. An end earlier than the start on the
 // same row means the segment crosses midnight. Segments under a minute are
-// left out, as worklog.py does. Returns { segments, error, row, workedSec,
-// pausedSec, first, last }.
-function checkRows(rows, nowMs, allowOpen) {
+// left out, as worklog.py does, except on a live session (liveState "running"
+// or "paused"), whose segments all stay until the review; a running one keeps
+// its last row open. Returns { segments, error, row, workedSec, pausedSec,
+// first, last }.
+function checkRows(rows, nowMs, allowOpen, liveState) {
   var segs = []
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i]
@@ -701,9 +709,12 @@ function checkRows(rows, nowMs, allowOpen) {
       if (!untouchedEnd && (end < start || (end === start && r.to < r.from))) end = parseIso(isoFromLocal(addDays(r.date, 1), r.to))
     }
     if (start > nowMs + 60000 || end > nowMs + 60000) return { error: "segment " + (i + 1) + " is in the future", row: i }
-    if (end - start < MIN_SEGMENT_SEC * 1000 && !r.open) continue
+    if (end < start) return { error: "segment " + (i + 1) + " ends before it starts", row: i }
+    if (end - start < MIN_SEGMENT_SEC * 1000 && !r.open && !liveState) continue
     segs.push({ start: start, end: end, open: r.open, row: i, endReason: r.endReason || "edited" })
   }
+  if (liveState === "running" && !(rows.length && rows[rows.length - 1].open))
+    return { error: "the running segment must stay open", row: rows.length - 1 }
   segs.sort(function(a, b) { return a.start - b.start })
   var worked = 0
   var paused = 0
@@ -810,6 +821,7 @@ if (typeof module !== "undefined") {
     rowsFromSegments: rowsFromSegments,
     rowEndDays: rowEndDays,
     checkRows: checkRows,
+    rowNextMinute: rowNextMinute,
     parseTags: parseTags,
     clip: clip,
     firstLine: firstLine

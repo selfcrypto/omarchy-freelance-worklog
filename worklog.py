@@ -29,6 +29,7 @@ import argparse
 import calendar
 import csv
 import fcntl
+import hashlib
 import html
 import io
 import json
@@ -835,7 +836,7 @@ def clean_segments(raw, now, allow_open=False, drop_short=True):
             end = None
         else:
             end = parse_iso(end_raw, "segments")
-            if end <= start:
+            if end < start:
                 raise Refusal("segment %d ends before it starts" % (i + 1), "segments")
         if (end or start) > now + timedelta(seconds=60):
             raise Refusal("segment %d is in the future" % (i + 1), "segments")
@@ -852,8 +853,8 @@ def clean_segments(raw, now, allow_open=False, drop_short=True):
             raise Refusal("segments overlap at %s" % local(parse_iso(nxt["start"])).strftime("%H:%M"), "segments")
     if drop_short:
         out = [s for s in out if s["end"] is None or worked_sec([s], now) >= MIN_SEGMENT_SEC]
-    if not out or (worked_sec(out, now) <= 0 and out[-1]["end"] is not None):
-        raise Refusal("nothing worked: the session is empty", "segments")
+        if not out or (worked_sec(out, now) <= 0 and out[-1]["end"] is not None):
+            raise Refusal("nothing worked: the session is empty", "segments")
     return out
 
 
@@ -1128,6 +1129,7 @@ def build_view(store, now):
         open_seg = segments[-1] if segments and not segments[-1].get("end") else None
         active = {
             "id": a["session"]["id"],
+            "editBase": edit_base(a),
             "company": a["session"].get("company", cid),
             "segments": segments,
             "draft": a.get("draft", {"summary": "", "tags": []}),
@@ -1163,6 +1165,15 @@ def build_view(store, now):
 
 
 # ---------------------------------------------------------------- lifecycle
+
+def edit_base(active):
+    """Fingerprint of what the session form shows. A save carrying an older one
+    is refused: the session moved on while the form was open. Heartbeats and
+    the announced flag stay out, so they never block a save."""
+    s = active["session"]
+    shown = [s["id"], active["state"], s.get("company"), s["segments"], active.get("draft")]
+    return hashlib.sha256(json.dumps(shown, sort_keys=True).encode("utf-8")).hexdigest()
+
 
 def need_state(store, *states):
     state = store.active["state"] if store.active else "idle"
@@ -1274,18 +1285,24 @@ def cmd_back(store, args, now):
     store.active["pauseReason"] = "manual"
 
 
+def set_draft(active, summary, tags):
+    draft = active.setdefault("draft", {"summary": "", "tags": []})
+    if summary is not None:
+        draft["summary"] = summary[:MAX_SUMMARY]
+    if tags is not None:
+        draft["tags"] = [t.strip()[:MAX_TAG] for t in tags.split(",") if t.strip()][:MAX_TAGS]
+
+
 def cmd_draft(store, args, now):
     need_state(store, "running", "paused", "ending")
-    draft = store.active.setdefault("draft", {"summary": "", "tags": []})
-    if args.summary is not None:
-        draft["summary"] = args.summary[:MAX_SUMMARY]
-    if args.tags is not None:
-        draft["tags"] = [t.strip()[:MAX_TAG] for t in args.tags.split(",") if t.strip()][:MAX_TAGS]
+    set_draft(store.active, args.summary, args.tags)
 
 
 def cmd_edit_active(store, args, now):
     state = need_state(store, "running", "paused", "ending")
-    if not args.segments and not args.company:
+    if args.base is not None and args.base != edit_base(store.active):
+        raise Refusal("The session changed. Open it again.", "segments")
+    if not args.segments and not args.company and args.summary is None and args.tags is None:
         raise Refusal("nothing to change", "segments")
     if args.company:
         company = resolve_company(store, args.company, allow_archived=True)
@@ -1298,8 +1315,17 @@ def cmd_edit_active(store, args, now):
         segments = clean_segments(args.segments, now, allow_open=state == "running", drop_short=False)
         if state == "running" and segments[-1]["end"] is not None:
             raise Refusal("a running session keeps its last segment open", "segments")
+        # The form's minute of tolerance stays out of the file: a time ahead of
+        # now is now, so nothing sits past the heartbeat.
+        for seg in segments:
+            for key in ("start", "end"):
+                if seg.get(key) and parse_iso(seg[key]) > now:
+                    seg[key] = iso(now)
         check_no_overlap(store, segments, now, skip_id=store.active["session"]["id"])
         store.active["session"]["segments"] = segments
+        if state == "running":
+            store.active["heartbeatAt"] = iso(now)
+    set_draft(store.active, args.summary, args.tags)
 
 
 def session_company(store, args, default):
@@ -2177,6 +2203,7 @@ def parser():
     p.add_argument("--summary")
     p.add_argument("--tags")
     p.add_argument("--segments")
+    p.add_argument("--base")
     p.add_argument("--id")
     p.add_argument("--boot-id", dest="boot_id")
     p.add_argument("--week")

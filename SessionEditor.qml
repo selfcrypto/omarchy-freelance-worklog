@@ -6,9 +6,11 @@ import qs.Ui
 import "Model.js" as Model
 
 // The session form: what was done, tags, the work segments and their totals,
-// then the buttons. Three uses:
+// then the buttons. Four uses:
 //   review  the end-of-session page (Confirm, Back to work, Discard)
 //   edit    a confirmed session from the history (Save, Cancel, Delete)
+//   live    the running or paused session (Save, Cancel); it stays as it is:
+//           a running last segment stays open, the summary can wait
 //   new     time that was not tracked (Add, Cancel); the last segment can run
 //           on until now ("now"), which starts a timer with the earlier
 //           segments already in it
@@ -44,10 +46,13 @@ Item {
   readonly property color hoverFill: Style.hoverFillFor(foreground, accent)
   // Only with no session live: the running segment becomes the timer.
   property bool canRunOn: true
-  readonly property bool allowOpen: mode === "new" && canRunOn
+  // The state a live session was in when the form opened ("running", "paused").
+  property string liveState: ""
+  readonly property bool mustRunOn: mode === "live" && liveState === "running"
+  readonly property bool allowOpen: (mode === "new" && canRunOn) || mustRunOn
 
   property int revision: 0
-  readonly property var check: { revision; nowMs; return Model.checkRows(rowsArray(), nowMs, allowOpen) }
+  readonly property var check: { revision; nowMs; return Model.checkRows(rowsArray(), nowMs, allowOpen, mode === "live" ? liveState : "") }
   readonly property bool runsOn: { revision; return rowModel.count > 0 && rowModel.get(rowModel.count - 1).open === true }
   readonly property string summaryText: summaryEdit.text
   readonly property string tagsText: tagsField.text
@@ -107,13 +112,21 @@ Item {
 
   function setRow(i, key, value) {
     rowModel.setProperty(i, key, value)
-    if (key !== "open") rowModel.setProperty(i, "endReason", "edited")
+    if (key === "to") rowModel.setProperty(i, "endReason", "edited")
     revision++
   }
 
   function addRow() {
     var last = rowModel.count ? rowModel.get(rowModel.count - 1) : null
-    var start = last ? (last.open ? Math.min(1439, minutesNow()) : last.to) : Math.max(0, minutesNow() - 60)
+    // The running segment stays last: the new one goes before it.
+    if (mustRunOn && last && last.open) {
+      var before = rowModel.count > 1 ? rowModel.get(rowModel.count - 2) : null
+      var from = before && before.date === last.date ? Math.min(last.from, Model.rowNextMinute(before)) : Math.max(0, last.from - 60)
+      rowModel.insert(rowModel.count - 1, { date: last.date, from: from, to: last.from, open: false, endReason: "edited", startIso: "", endIso: "" })
+      revision++
+      return
+    }
+    var start = last ? (last.open ? Math.min(1439, minutesNow()) : Model.rowNextMinute(last)) : Math.max(0, minutesNow() - 60)
     if (last && last.open) {
       rowModel.setProperty(rowModel.count - 1, "open", false)
       rowModel.setProperty(rowModel.count - 1, "to", start)
@@ -123,7 +136,7 @@ Item {
   }
 
   function removeRow(i) {
-    if (rowModel.count <= 1) return
+    if (rowModel.count <= 1 || (mustRunOn && rowModel.get(i).open)) return
     rowModel.remove(i)
     revision++
   }
@@ -143,8 +156,8 @@ Item {
   function submit() {
     if (busy) return
     if (check.error) { error = check.error; errorField = "segments"; return }
-    // A session that runs on gets its summary at the review.
-    if (summaryEdit.text.trim() === "" && !runsOn) { error = "Write what you did"; errorField = "summary"; summaryEdit.forceActiveFocus(); return }
+    // A session that goes on gets its summary at the review.
+    if (summaryEdit.text.trim() === "" && !runsOn && mode !== "live") { error = "Write what you did"; errorField = "summary"; summaryEdit.forceActiveFocus(); return }
     error = ""
     submitted(check.segments, summaryEdit.text.trim(), tagsField.text, runsOn)
   }
@@ -260,7 +273,7 @@ Item {
           invalid: editor.errorField === "summary"
           font.family: editor.fontFamily
           font.pixelSize: Style.font.body
-          placeholderText: "Ctrl+Enter saves"
+          placeholderText: editor.mode === "live" ? "Optional until the session ends. Ctrl+Enter saves" : "Ctrl+Enter saves"
           onTextEdited: {
             if (editor.errorField === "summary") {
               editor.error = ""
@@ -503,7 +516,7 @@ Item {
                   visible: editor.allowOpen && segRow.isLast
                   label: "now"
                   on: segRow.open
-                  clickable: true
+                  clickable: editor.mode === "new"
                   onClicked: {
                     var opening = !segRow.open
                     editor.setRow(segRow.index, "open", opening)
@@ -513,7 +526,8 @@ Item {
                   HoverHandler { id: nowHover }
                   PanelToolTip {
                     visible: nowHover.hovered
-                    text: segRow.open ? "Still working: Add starts the timer from here" : "Still working on it: keep this segment running"
+                    text: editor.mustRunOn ? "Running: Pause or End closes this segment"
+                      : (segRow.open ? "Still working: Add starts the timer from here" : "Still working on it: keep this segment running")
                     fontFamily: editor.fontFamily
                   }
                 }
@@ -538,7 +552,7 @@ Item {
 
                 // Kept in place with one row too, so the columns line up.
                 PanelActionButton {
-                  enabled: rowModel.count > 1
+                  enabled: rowModel.count > 1 && !(editor.mustRunOn && segRow.open)
                   opacity: enabled ? 1 : 0
                   iconText: "󰆴"
                   tooltipText: "Remove this segment"
@@ -618,7 +632,7 @@ Item {
       spacing: Style.space(8)
 
       Button {
-        text: editor.mode === "review" ? "Confirm" : (editor.mode === "edit" ? "Save" : (editor.runsOn ? "Add and keep running" : "Add"))
+        text: editor.mode === "review" ? "Confirm" : (editor.mode === "new" ? (editor.runsOn ? "Add and keep running" : "Add") : "Save")
         iconText: "󰄬"
         active: true
         bordered: true
@@ -641,7 +655,7 @@ Item {
 
       Button {
         id: destroyButton
-        visible: editor.mode !== "new"
+        visible: editor.mode === "review" || editor.mode === "edit"
         text: editor.mode === "review" ? "Discard" : "Delete"
         foreground: hot ? editor.urgent : editor.dim
         accent: editor.urgent

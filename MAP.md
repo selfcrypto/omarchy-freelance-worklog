@@ -12,7 +12,8 @@
 | The month page | `worklog.py` (`cmd_month`), `Panel.qml` (`openMonth`, `loadMonth`, `monthRows`, month column) | `Model.js` (`cycleDaySeries`, `cycleWeekSeries`, `sessionTip`) |
 | A line of text in the panel | `Panel.qml`, formatting in `Model.js` (`weekLine`, `paceLine`, `cycleLeftLine`, `weekGuideLine`, `moneySummary`, `fmt*`) | `tests/model.test.js` |
 | A chart | `WeekChart.qml` (`markers`, `thinning`); series in `Model.js` (`daySeries`, `weekSeries`, `cycleDaySeries`, `cycleWeekSeries`) | |
-| The review or add/edit form | `SessionEditor.qml`, `TimeField.qml`; checks in `Model.js` (`checkRows`, `rowStartDate`, `rowsFromSegments`) | `worklog.py` (`clean_segments`) must agree |
+| The review or add/edit form | `SessionEditor.qml`, `TimeField.qml`; checks in `Model.js` (`checkRows`, `rowStartDate`, `rowsFromSegments`, `rowNextMinute`) | `worklog.py` (`clean_segments`) must agree |
+| Editing the running or paused session | `Panel.qml` (`editLive`, `submitEditor`, `onSessionStateChanged`), `SessionEditor.qml` (mode `live`, `liveState`, `mustRunOn`), `Service.qml` (`editActive`) | `worklog.py` (`cmd_edit_active`, `edit_base`) |
 | A panel page or key | `Panel.qml` (`go`, `keyCatcher` `Keys.onPressed`, page columns) | `footerKeys` (the fixed footer), `hero` |
 | The bar pill | `Panel.qml` (`WidgetButton`, `pillLabel`) | |
 | An IPC call | `Service.qml` (`IpcHandler`, target `worklog`) | `README.md` |
@@ -27,7 +28,7 @@
 | `manifest.json` | Plugin manifest: service + bar widget, defaults, settings schema |
 | `Service.qml` | Owner of state, helper queue, automatic pauses, IPC, toasts |
 | `Panel.qml` | Bar pill and the panel: track, away, review, editor, history, month and companies pages; `MoneyBlock`, `CompanyChips` |
-| `SessionEditor.qml` | Summary, tags, segment rows with live totals; review, edit and new modes |
+| `SessionEditor.qml` | Summary, tags, segment rows with live totals; review, edit, live and new modes |
 | `TimeField.qml` | HH:MM field whose text is not bound to its minutes; selected by a focusing click, places the ":" as digits are typed (`Model.autoColon`) |
 | `KeyField.qml` | Text field without an editable Qt text control: plain Text with its own line layout (`wrapLines`), a caret bar, clicks by measured widths, selection (drag, Shift+keys, double click), dead keys, `keypadDigits` (time boxes), copy and cut through `wl-copy` stdin, paste capped at 4096 bytes |
 | `WeekChart.qml` | Column chart of Rectangles with an optional dashed target line and dashed markers |
@@ -60,9 +61,9 @@ v1 terms under `legacy`). The shell sends the whole list as JSON on stdin (`work
 
 | File | Covers |
 |---|---|
-| `tests/test_worklog.py` | Lifecycle, recovery, midnight/DST, week/month/money, validation, overlaps, history, backups, corrupt or malformed files, concurrency, exports clipped to the period |
+| `tests/test_worklog.py` | Lifecycle, editing the live session (stale forms refused), recovery, midnight/DST, week/month/money, validation, overlaps, history, backups, corrupt or malformed files, concurrency, exports clipped to the period |
 | `tests/test_companies.py` | v1 migration, cycles (anchor days, short months), terms in force, mid-cycle proration, past cycles unchanged by new terms, hourly and mixed, company scoping, archive rules, validation, extra hours billed or waived, reports (MD, CSV, HTML, es) |
 | `tests/model.test.js` | Formatting, live totals, pace and money (prorated, hourly, mixed, extra hours), cycles (same cases as the helper), month page series, terms check, chart series, clock parsing, editor rows |
 | `tests/qml/tst_timefield.qml`, `tests/qml/tst_keyfield.qml` | Typing over a time keeps what is typed; KeyField typing, editing, limits, keys passed on, caret kept in view, dead keys, clicks placing the caret |
-| `tests/render/` | `run.sh` renders SessionEditor and WeekChart under `qs` (the shell's Commons and Ui linked in) at 280 and 400 px, dark and light, with long text; fails on anything past the edges or a bar in two tones (`magick`), saves PNGs |
+| `tests/render/` | `run.sh` renders SessionEditor and WeekChart under `qs` (the shell's Commons and Ui linked in) at 280 and 400 px, dark and light, with long text, for a confirmed and a running session; fails on anything past the edges or a bar in two tones (`magick`), saves PNGs. The live cases drive the form (running row stays last and open, no summary needed) |
 | `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` that offers text/html first (`bin/`): the UTF-8 text type is asked for, the copy stops early, 4096 bytes kept; a fake `wl-copy` gets a copy on stdin only, and a cut whose copy fails keeps the text |

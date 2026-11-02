@@ -38,6 +38,8 @@ Panel {
 
   property string page: "track"
   property string editorMode: "new"
+  // The live session's editBase when its form opened.
+  property string liveBase: ""
   property string editingId: ""
   property string confirmAction: ""
 
@@ -119,7 +121,7 @@ Panel {
     if (page === "away") return []
     var live = sessionState === "running" || sessionState === "paused"
     return [{ key: "space", text: sessionState === "running" ? "pause" : (sessionState === "paused" ? "resume" : (sessionState === "ending" ? "review" : "start")) }]
-      .concat(live ? [{ key: "e", text: "end" }] : []).concat([{ key: "n", text: "add time" }, { key: "m", text: "month" }, { key: "h", text: "history" }])
+      .concat(live ? [{ key: "enter", text: "edit" }, { key: "e", text: "end" }] : []).concat([{ key: "n", text: "add time" }, { key: "m", text: "month" }, { key: "h", text: "history" }])
       .concat(several ? [{ key: "c", text: "company" }] : [])
   }
 
@@ -170,6 +172,20 @@ Panel {
     editingId = s.id
     page = "editor"
     editor.load(Model.rowsFromSegments(s.segments), s.summary, s.tags, s.company || svc.currentCompany)
+    Qt.callLater(editor.focusSummary)
+  }
+
+  // The running or paused session in the form; once it ended, the review.
+  function editLive() {
+    if (!ready || sessionState === "idle") return
+    if (sessionState === "ending") { go("review"); return }
+    returnPage = "track"
+    editorMode = "live"
+    editingId = ""
+    liveBase = view.active.editBase
+    editor.liveState = sessionState
+    page = "editor"
+    editor.load(Model.rowsFromSegments(view.active.segments), view.active.draft.summary, view.active.draft.tags, view.active.company)
     Qt.callLater(editor.focusSummary)
   }
 
@@ -548,14 +564,18 @@ Panel {
   function submitEditor(segments, summary, tags, running) {
     editor.busy = true
     var company = editor.company
+    var form = page + "/" + editorMode
     var done = function(r) {
       editor.busy = false
+      // The page moved on meanwhile (the away prompt): a late answer leaves it there.
+      if (root.page + "/" + root.editorMode !== form) return
       if (!r.ok) { editor.error = r.error; editor.errorField = r.field; return }
       if (root.editorMode === "review" || running) root.go("track")
       else root.go(root.returnPage)
     }
     if (editorMode === "review") svc.confirm(summary, tags, segments, done, company)
     else if (editorMode === "edit") svc.updateSession(editingId, segments, summary, tags, done, company)
+    else if (editorMode === "live") svc.editActive(liveBase, segments, summary, tags, view.active && company !== view.active.company ? company : "", done)
     else if (running) svc.startWithSegments(segments, company, function(r) {
       if (r.ok) svc.saveDraft(summary, tags)
       done(r)
@@ -670,6 +690,7 @@ Panel {
     function onSessionStateChanged() {
       if (!root.opened) return
       if (root.page === "review" && root.sessionState !== "ending") root.go("track")
+      if (root.page === "editor" && root.editorMode === "live") root.go("track")
       if (root.page === "away" && !root.svc.prompt) root.go("track")
     }
   }
@@ -1389,6 +1410,7 @@ Panel {
           return
         }
         if (event.key === Qt.Key_Space) root.primaryAction()
+        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) root.editLive()
         else if (event.text === "e") root.svc.stop()
         else if (event.text === "d") root.askDiscard()
         else if (event.text === "n") root.newEntry()
@@ -1409,7 +1431,7 @@ Panel {
         anchors.left: parent.left
         anchors.right: parent.right
         title: root.page === "history" ? "History" : (root.page === "review" ? "Session ended"
-          : (root.page === "away" ? "Welcome back" : (root.page === "editor" ? (root.editorMode === "edit" ? "Edit session" : "Add time")
+          : (root.page === "away" ? "Welcome back" : (root.page === "editor" ? (root.editorMode === "new" ? "Add time" : "Edit session")
           : (root.page === "month" ? (root.monthData ? root.monthData.label : "Month")
           : (root.page === "companies" ? root.companiesTitle : "Freelance Worklog")))))
         meta: {
@@ -1423,7 +1445,7 @@ Panel {
           if (root.page === "review") return (editor.check.error ? "Nothing to record" : Model.fmtDuration(editor.check.workedSec) + " worked")
             + " · " + Model.dayLabel(Model.localDateKey(Date.parse(root.activeSince || root.view.now)))
           if (root.page === "away") return root.svc.prompt ? "Away " + Model.fmtDuration(root.svc.prompt.awaySec) + " · paused at " + Model.localHM(root.svc.prompt.since) : ""
-          if (root.page === "editor") return root.editorMode === "edit" ? "Changes are saved as edited" : "Work you did not track"
+          if (root.page === "editor" && root.editorMode !== "live") return root.editorMode === "edit" ? "Changes are saved as edited" : "Work you did not track"
           if (root.sessionState === "running") return "Running · since " + Model.localHM(root.activeSince)
           if (root.sessionState === "paused") return "Paused " + Model.fmtDuration(root.svc.pauseSec) + (root.reasonText ? " · " + root.reasonText : "")
           if (root.sessionState === "ending") return "Waiting for review"
@@ -1649,6 +1671,16 @@ Panel {
                 }
 
                 Item { Layout.fillWidth: true }
+
+                PanelActionButton {
+                  visible: root.sessionState === "running" || root.sessionState === "paused"
+                  iconText: "󰏫"
+                  tooltipText: "Edit this session (enter)"
+                  foreground: root.dim
+                  hoverColor: root.foreground
+                  fontFamily: root.fontFamily
+                  onClicked: root.editLive()
+                }
 
                 PanelActionButton {
                   visible: root.sessionState !== "idle"

@@ -3,18 +3,18 @@
 Current state only. The next session starts here. History: `docs/history/status-journal.md`.
 Budget 15 KB.
 
-## Where things stand, 2026-10-30
+## Where things stand, 2026-11-02
 
 | Thing | State |
 |---|---|
-| Version | 0.3.6 published and verified (#13348 closed). 0.3.7 committed locally, not pushed |
-| Tests | 82 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 34 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
-| Review | 0.3.6: gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel (4 + 7 findings, all reproduced, 9 fixed with tests; see decisions). Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
+| Version | 0.3.6 published and verified (#13348 closed). 0.3.7 and 0.3.8 committed locally, not pushed |
+| Tests | 96 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 39 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
+| Review | 0.3.8: first-look design pass, gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel, before the code (findings reproduced, built in; see decisions). The code itself is not reviewed. 0.3.6: gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel (4 + 7 findings, all reproduced, 9 fixed with tests; see decisions). Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
 
-1. 0.3.7 (chart bars in one tone) is installed here and held: it goes out with the next real change, so the maintainer is not called for a cosmetic fix. Then push and open a new `[Verify]` issue; the release commit must stay last on main.
-2. Not yet checked live: the reminder toast, the light theme, chart clicks with a pointer.
+1. 0.3.8 (edit the live session) carries 0.3.7 (chart bars in one tone). On Kike's word, push and open a new `[Verify]` issue; the release commit must stay last on main.
+2. Not yet checked live: the edit form on the live session (Enter, the pencil, Save, a pause while the form is open), the reminder toast, the light theme, chart clicks with a pointer. `Panel.qml` has no automated test.
 3. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
 
 ## Standing facts
@@ -25,6 +25,7 @@ Budget 15 KB.
 
 ## Done
 
+- **2026-11-02.** 0.3.8: the running or paused session can be edited (Enter or the pencil on the track page): times, summary, tags, company, in one write. A form opened before the session changed is refused. A start moved past its stored end is an error in every form (it used to drop the segment). Add segment starts on the first free minute. Pause reasons survive an edited start.
 - **2026-10-30.** 0.3.7: chart bars are one shape, so a translucent bar has one tone; the render check compares two pixels of a bar.
 - **2026-10-30.** 0.3.6: text fields select (drag, Shift+keys, double click on a word), copy, cut and paste with Ctrl or Omarchy's Super keys, move by word and by line; paste asks for the UTF-8 text type. A click into a time box selects it; keypad keys type digits in time boxes; the ":" comes and goes as digits are typed or deleted. On today's page a start later than now is the day before when the segment ends now or past midnight. Accent on the primary buttons, the run toggle when on, the chart bars, the pace when ahead, the Recent icons and the key caps. Checked live by Kike; reviewed by gpt-6-astra and Fable, fixes in decisions.
 - **2026-10-28.** 0.3.5: text fields draw the caret as a bar over the text (it used to be a character that pushed the text apart) and lay out their lines themselves.
