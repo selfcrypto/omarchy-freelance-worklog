@@ -5,7 +5,7 @@
 ```bash
 cd ~/Work/omarchy-freelance-worklog
 python3 -m unittest discover -s tests      # helper, 96 tests, ~25 s
-node --test tests/                         # Model.js, 39 tests (sets TZ=Europe/Madrid itself)
+node --test tests/                         # Model.js, 40 tests (sets TZ=Europe/Madrid itself)
 QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 33 tests
 bash tests/paste/run.sh                    # KeyField clipboard: UTF-8 text type, paste stopped early, 4096 bytes kept, copy on stdin, failed cut keeps the text (fakes in bin/, runs qs)
 bash tests/render/run.sh [png dir]         # session form (confirmed and running session) and chart at 280/400 px, dark and light: nothing spills, a bar has one tone, the live form keeps its running row (runs qs, magick)

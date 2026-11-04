@@ -66,6 +66,25 @@ test("live totals add the open segment", () => {
   assert.strictEqual(M.openSec(view({ state: "paused" }), NOW, null), 0)
 })
 
+test("the week guide gives way to the cycle's lead", () => {
+  const ahead = (worked) => view({ month: Object.assign({}, view().month, { workedSec: worked }) })
+  // 43h 30m of 40h owed with 5 days left: nothing more this week.
+  const covered = M.weekLive(ahead(42 * 3600), NOW)
+  assert.deepStrictEqual([covered.paced, covered.remainingSec], [true, 0])
+  assert.strictEqual(M.weekGuideLine(covered), "This week 7h 30m, nothing more needed to keep pace")
+  assert.strictEqual(M.weekLine(covered), "7h 30m this week · nothing more needed to keep pace")
+  // 4h 40m ahead: the pace to Sunday (4 days of this cycle, 1 of the next) less the lead.
+  const part = M.weekLive(ahead(38 * 3600), NOW)
+  assert.deepStrictEqual([part.paced, part.remainingSec], [true, 6446])
+  assert.strictEqual(M.weekGuideLine(part), "This week 7h 30m, 1h 47m more keeps the cycle on pace")
+  // Behind pace: the guide's own hours.
+  const behind = M.weekLive(view(), NOW)
+  assert.deepStrictEqual([behind.paced, behind.remainingSec], [false, 2.5 * 3600])
+  // Hourly cycles owe no hours: the guide stands.
+  const hourly = M.weekLive(view({ month: Object.assign({}, view().month, { billing: "hourly", targetSec: 0, expectedSec: 0, workedSec: 50 * 3600 }) }), NOW)
+  assert.strictEqual(hourly.paced, false)
+})
+
 test("open segment is clipped to the period start", () => {
   const v = view({ active: { closedSec: 0, pausedSec: 0, openStart: "2026-10-26T22:00:00Z" } })
   assert.strictEqual(M.openSec(v, NOW, v.today.startAt), Math.floor((NOW - Date.parse("2026-10-26T23:00:00Z")) / 1000))

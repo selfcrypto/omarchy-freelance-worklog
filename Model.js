@@ -191,14 +191,34 @@ function currentPauseSec(view, nowMs) {
   return Math.max(0, Math.floor((nowMs - parseIso(view.active.lastEnd)) / 1000))
 }
 
+// What the package cycle needs by the end of the week to be on its pace:
+// the pace's hours for the days after today, less the lead (or plus the
+// shortfall) by today. Days of the week past the cycle's end count at this
+// cycle's daily pace. -1 when the cycle owes no hours.
+function cycleNeedByWeekEnd(cycle, cycleDays, weekDaysLeft) {
+  if (!cycle || !(cycle.targetSec > 0) || !(cycle.daysLeft > 0)) return -1
+  var after = Math.max(0, weekDaysLeft - 1)
+  var inCycle = Math.min(after, cycle.daysLeft - 1)
+  var rate = cycle.daysLeft > 1 ? Math.max(0, cycle.targetSec - cycle.expectedSec) / (cycle.daysLeft - 1) : 0
+  var beyond = cycleDays > 0 ? (after - inCycle) * cycle.targetSec / cycleDays : 0
+  return Math.max(0, Math.ceil(inCycle * rate + beyond - cycle.balanceSec))
+}
+
+// The week against its guide. The guide is an estimate and the package
+// cycle is what is owed, so the hours to go are capped by what keeps the
+// cycle on pace to the week's end (`paced` when the cap applies).
 function weekLive(view, nowMs) {
   var w = view.week
   var worked = w.workedSec + openSecMine(view, nowMs, w.startAt)
   var remaining = Math.max(0, w.targetSec - worked)
+  var need = view.month ? cycleNeedByWeekEnd(monthLive(view, nowMs), view.month.days, w.daysLeft) : -1
+  var paced = need >= 0 && need < remaining
+  if (paced) remaining = need
   return {
     workedSec: worked,
     targetSec: w.targetSec,
     remainingSec: remaining,
+    paced: paced,
     daysLeft: w.daysLeft,
     perDaySec: w.daysLeft > 0 ? Math.ceil(remaining / w.daysLeft) : remaining,
     done: w.targetSec > 0 && worked >= w.targetSec
@@ -312,6 +332,11 @@ function weekLine(live) {
   var head = fmtDuration(live.workedSec) + " of " + fmtDuration(live.targetSec)
   if (live.done) return head + " · done"
   var days = live.daysLeft === 1 ? "1 day left" : live.daysLeft + " days left"
+  if (live.paced) {
+    var week = fmtDuration(live.workedSec) + " this week"
+    if (!(live.remainingSec > 0)) return week + " · nothing more needed to keep pace"
+    return week + " · " + fmtDuration(live.remainingSec) + " more keeps the cycle on pace · " + days + " · " + fmtDuration(live.perDaySec) + " a day"
+  }
   return head + " · " + fmtDuration(live.remainingSec) + " left · " + days + " · " + fmtDuration(live.perDaySec) + " a day"
 }
 
@@ -323,9 +348,12 @@ function cycleLeftLine(live) {
 }
 
 // The track page's week line, named as the guide it is: weeks are flexible,
-// only the cycle total is owed. No guide: the week's hours.
+// only the cycle total is owed. When the cycle's pace asks for less than the
+// guide, the guide's figure is left out. No guide: the week's hours.
 function weekGuideLine(live) {
   if (!(live.targetSec > 0)) return "This week " + fmtDuration(live.workedSec)
+  if (live.paced) return "This week " + fmtDuration(live.workedSec)
+    + (live.remainingSec > 0 ? ", " + fmtDuration(live.remainingSec) + " more keeps the cycle on pace" : ", nothing more needed to keep pace")
   var head = "Week guide: " + fmtDuration(live.workedSec) + " of " + fmtDuration(live.targetSec)
   return head + (live.done ? ", done" : ", " + fmtDuration(live.remainingSec) + " to go")
 }
