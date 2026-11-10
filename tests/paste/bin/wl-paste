@@ -4,7 +4,17 @@
 # WLPASTE_CHAR picks the character ("x", or "é" for two bytes of UTF-8).
 # It offers text/html first, as browsers do; the field must ask for the
 # UTF-8 text type (any other type gets nothing).
+# WLPASTE_DELAY=<seconds>: a slow owner that waits that long before each
+# answer and then sends "late" (stale.qml).
 import os, sys, time
+delay = os.environ.get("WLPASTE_DELAY")
+if delay:
+    time.sleep(float(delay))
+    if "--list-types" in sys.argv:
+        print("text/plain;charset=utf-8")
+    else:
+        sys.stdout.write("late")
+    sys.exit(0)
 if "--list-types" in sys.argv:
     print("text/html\ntext/plain;charset=utf-8\ntext/plain\nUTF8_STRING")
     sys.exit(0)

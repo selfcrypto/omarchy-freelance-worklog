@@ -4,12 +4,13 @@
 # the UTF-8 text type, stop the copy early (the producer gets out well under
 # 1 MB) and keep 4096 bytes of UTF-8, cut at a whole character. A fake
 # wl-copy checks a copy sends the selection on stdin, never as an argument,
-# and that a cut whose copy fails keeps the text.
+# and that a cut whose copy fails keeps the text. A late paste lands only in
+# the edit it was asked for (stale.qml).
 set -eu
 here=$(cd -- "$(dirname -- "$0")" && pwd)
 scratch=$(mktemp -d)
 trap 'rm -rf -- "$scratch"' EXIT
-cp "$here/../../KeyField.qml" "$here/paste.qml" "$here/copy.qml" "$scratch/"
+cp "$here/../../KeyField.qml" "$here/paste.qml" "$here/copy.qml" "$here/stale.qml" "$scratch/"
 mkdir -m 700 "$scratch/runtime"
 fail=0
 check() {  # character, expected characters kept
@@ -34,4 +35,10 @@ copycheck() {  # WLCOPY_FAIL value, text the cut must leave
 }
 copycheck "" ""
 copycheck 1 "unsaved note"
+WLPASTE_DELAY=0.5 PATH="$here/bin:$PATH" QT_QPA_PLATFORM=offscreen \
+  XDG_RUNTIME_DIR="$scratch/runtime" timeout 10 qs -p "$scratch/stale.qml" --no-color > "$scratch/out" 2>&1 || true
+stale=$(grep -o 'STALE .*' "$scratch/out" || true)
+echo "${stale:-STALE no result}"
+want='STALE {"kept":"A late","reloadEarly":"company B","reloadLate":"company B","typed":"summary!","hidden":"company A","hiddenStopped":true}'
+[ "$stale" = "$want" ] || fail=1
 [ "$fail" -eq 0 ] && echo ok || { echo FAIL; exit 1; }

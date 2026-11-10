@@ -30,7 +30,7 @@
 | `Panel.qml` | Bar pill and the panel: track, away, review, editor, history, month and companies pages; `MoneyBlock`, `CompanyChips` |
 | `SessionEditor.qml` | Summary, tags, segment rows with live totals; review, edit, live and new modes |
 | `TimeField.qml` | HH:MM field whose text is not bound to its minutes; selected by a focusing click, places the ":" as digits are typed (`Model.autoColon`) |
-| `KeyField.qml` | Text field without an editable Qt text control: plain Text with its own line layout (`wrapLines`), a caret bar, clicks by measured widths, selection (drag, Shift+keys, double click), dead keys, `keypadDigits` (time boxes), copy and cut through `wl-copy` stdin, paste capped at 4096 bytes |
+| `KeyField.qml` | Text field without an editable Qt text control: plain Text with its own line layout (`wrapLines`), a caret bar, clicks by measured widths, selection (drag, Shift+keys, double click), dead keys, `keypadDigits` (time boxes), copy and cut through `wl-copy` stdin, paste capped at 4096 bytes and bound to its edit (`pasteGeneration`, `dropPaste`) |
 | `WeekChart.qml` | Column chart of Rectangles with an optional dashed target line and dashed markers |
 | `Model.js` | Pure helpers shared by the QML |
 | `worklog.py` | Data helper: storage, lifecycle, aggregation, exports |
@@ -66,4 +66,4 @@ v1 terms under `legacy`). The shell sends the whole list as JSON on stdin (`work
 | `tests/model.test.js` | Formatting, live totals, pace and money (prorated, hourly, mixed, extra hours), cycles (same cases as the helper), month page series, terms check, chart series, clock parsing, editor rows |
 | `tests/qml/tst_timefield.qml`, `tests/qml/tst_keyfield.qml` | Typing over a time keeps what is typed; KeyField typing, editing, limits, keys passed on, caret kept in view, dead keys, clicks placing the caret |
 | `tests/render/` | `run.sh` renders SessionEditor and WeekChart under `qs` (the shell's Commons and Ui linked in) at 280 and 400 px, dark and light, with long text, for a confirmed and a running session; fails on anything past the edges or a bar in two tones (`magick`), saves PNGs. The live cases drive the form (running row stays last and open, no summary needed) |
-| `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` that offers text/html first (`bin/`): the UTF-8 text type is asked for, the copy stops early, 4096 bytes kept; a fake `wl-copy` gets a copy on stdin only, and a cut whose copy fails keeps the text |
+| `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` that offers text/html first (`bin/`): the UTF-8 text type is asked for, the copy stops early, 4096 bytes kept; a fake `wl-copy` gets a copy on stdin only, and a cut whose copy fails keeps the text; `stale.qml` with a slow `wl-paste` (`WLPASTE_DELAY`): a late paste is dropped after a form reload, an edit or a closed form |

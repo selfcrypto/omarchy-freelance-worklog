@@ -2,7 +2,8 @@ import QtQuick
 
 // A text field without an editable Qt text control. It draws plain Text and
 // takes keys one by one. The clipboard is read only on Ctrl+V or Shift+Insert,
-// through fixed `wl-paste` calls under `timeout`, at most 4096 bytes; Ctrl+C
+// through fixed `wl-paste` calls under `timeout`, at most 4096 bytes, and the
+// text lands only in the edit it was asked for; Ctrl+C
 // and Ctrl+X write the selection with `wl-copy`, the text on its stdin.
 //
 // Why: on Qt 6.12 an editable Qt text control (TextInput, TextEdit,
@@ -224,6 +225,15 @@ Item {
   property string pasteBuffer: ""
   property int pasteBytes: 0
   property bool pasteFull: false
+  // Bumped when a paste in flight must not land: the field is hidden (a form
+  // closed) or its text is replaced from outside (a form reloaded for
+  // another company or session).
+  property int pasteGeneration: 0
+
+  function dropPaste() {
+    pasteGeneration++
+    if (pasteProcess) pasteProcess.running = false
+  }
 
   // The longest start of `s` within `budget` bytes of UTF-8, cut at a whole
   // character: { text, bytes, cut }.
@@ -244,14 +254,23 @@ Item {
   readonly property var pasteTypes: ["text/plain;charset=utf-8", "text/plain", "UTF8_STRING", "STRING", "TEXT"]
 
   // Asks the clipboard which types it offers, then reads the best text one.
+  // The text lands only in the edit it was asked for: same generation, text,
+  // caret and selection as when the paste started, otherwise it is dropped.
   function paste() {
     if (pasteProcess) return
+    var gen = pasteGeneration
+    var was = { text: text, cursor: cursorPosition, anchor: selectionAnchor }
+    var current = function() {
+      return gen === field.pasteGeneration && was.text === field.text
+        && was.cursor === field.cursorPosition && was.anchor === field.selectionAnchor
+    }
     readClipboard(["--list-types"], function(offered) {
+      if (!current()) return
       var types = offered.split("\n")
       for (var i = 0; i < field.pasteTypes.length; i++) {
         if (types.indexOf(field.pasteTypes[i]) >= 0) {
           field.readClipboard(["--no-newline", "--type", field.pasteTypes[i]], function(got) {
-            if (got.length && field.insert(got)) field.textEdited()
+            if (current() && got.length && field.insert(got)) field.textEdited()
           })
           return
         }
@@ -405,7 +424,9 @@ Item {
       editingFinished()
     }
   }
+  onVisibleChanged: if (!visible) dropPaste()
   onTextChanged: {
+    if (!ownEdit) dropPaste()
     if (cursorPosition > text.length) cursorPosition = text.length
     if (!ownEdit || selectionAnchor > text.length) selectionAnchor = -1
   }
