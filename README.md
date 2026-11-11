@@ -1,6 +1,6 @@
 # Freelance Worklog
 
-Omarchy bar plugin for freelance hours: one client or several, packages or hourly. Agents: read `CLAUDE.md`.
+Omarchy bar plugin for freelance hours: one client or several, packages or hourly.
 
 - Start, pause and resume from the pill or the panel; the session pauses itself on lock, idle and suspend and asks what to do when you are back.
 - Ending a session opens a review: what you did, tags, the company, the times (editable), confirm.
@@ -49,6 +49,13 @@ PDF: open the HTML report in a browser and print, or `chromium --headless --prin
 
 Data: `~/.local/share/omarchy-worklog/` (a copy of `worklog.json` is kept in `backups/` before the first change of each day). Reports: `~/Documents/Worklog/`.
 
+Ledger size: the helper reads and writes at most 64 MB of `worklog.json` (decades of sessions). A save that would pass it is refused and nothing changes, so the ledger always stays readable. To raise the bound, set `WORKLOG_MAX_LEDGER_MB` for the shell (for example `export WORKLOG_MAX_LEDGER_MB=128` in `~/.config/uwsm/env`, then log out and in), or for one export by hand:
+
+```bash
+cd ~/.config/omarchy/plugins/io.github.selfcrypto.worklog
+echo '["export", "--month", "this", "--company", "all"]' | WORKLOG_MAX_LEDGER_MB=128 python3 -I worklog.py --stdin
+```
+
 ## Update
 
 ```bash
@@ -67,7 +74,7 @@ Removing the plugin keeps your data and reports. Delete `~/.local/share/omarchy-
 
 ## What it runs
 
-`python3 -I worklog.py --stdin` (the data helper, under `timeout`; its arguments go as JSON on stdin, so summaries, tags and terms never show in the process list), `omarchy-hyprland-session-locked` (lock detection), `omarchy-notification-send` (toasts), `omarchy-shell shell summon` (opens its own panel), `wl-paste` only on paste and `wl-copy` only on copy or cut (the text goes on its stdin). No network access, no sudo, no other files written than the data folder and the reports.
+`python3 -I worklog.py --stdin` (the data helper, under `timeout`; its arguments go as JSON on stdin, so summaries, tags and terms never show in the process list), `omarchy-hyprland-session-locked` (lock detection), `omarchy-notification-send` (toasts, under `timeout`), `omarchy-shell shell summon` (opens its own panel), `wl-paste` only on paste and `wl-copy` only on copy or cut (the text goes on its stdin). No network access, no sudo, no other files written than the data folder and the reports.
 
 ## License
 

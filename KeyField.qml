@@ -189,7 +189,7 @@ Item {
     if (!hasSelection) return false
     var p
     try {
-      p = Qt.createQmlObject('import Quickshell.Io; Process { property string payload: ""; onStarted: { write(payload); payload = ""; stdinEnabled = false } }', field, "KeyFieldCopy")
+      p = Qt.createQmlObject('import Quickshell.Io; Process { property string payload: ""; property bool launched: false; onStarted: { launched = true; write(payload); payload = ""; stdinEnabled = false } }', field, "KeyFieldCopy")
     } catch (e) {
       console.warn("KeyField: no clipboard writer: " + e)
       return false
@@ -197,11 +197,17 @@ Item {
     p.command = ["timeout", "-k", "1", "3", "wl-copy", "--type", "text/plain;charset=utf-8"]
     p.payload = selectedText
     p.stdinEnabled = true
-    p.exited.connect(function(code) {
+    // Ends once: on exit, or when `wl-copy` cannot start (no exit then).
+    var ended = false
+    var end = function(code) {
+      if (ended) return
+      ended = true
       p.destroy()
       if (code !== 0) console.warn("KeyField: copy failed, exit " + code)
       if (done) done(code === 0)
-    })
+    }
+    p.exited.connect(end)
+    p.runningChanged.connect(function() { if (!p.running && !p.launched) end(-1) })
     p.running = true
     return true
   }
@@ -284,7 +290,7 @@ Item {
     try {
       // An empty split marker hands over each chunk as it arrives, so a
       // clipboard with no newline is never buffered whole before the cap.
-      p = Qt.createQmlObject('import Quickshell.Io; Process { stdout: SplitParser { splitMarker: "" } }', field, "KeyFieldPaste")
+      p = Qt.createQmlObject('import Quickshell.Io; Process { property bool launched: false; onStarted: launched = true; stdout: SplitParser { splitMarker: "" } }', field, "KeyFieldPaste")
     } catch (e) {
       console.warn("KeyField: no clipboard reader: " + e)
       return
@@ -305,13 +311,20 @@ Item {
         p.running = false
       }
     })
-    p.exited.connect(function() {
-      var got = field.pasteBuffer
+    // Ends once: on exit, or with nothing when `wl-paste` cannot start (no
+    // exit then), so a later paste is never blocked.
+    var ended = false
+    var end = function() {
+      if (ended) return
+      ended = true
+      var got = p.launched ? field.pasteBuffer : ""
       field.pasteBuffer = ""
       field.pasteProcess = null
       p.destroy()
       done(got)
-    })
+    }
+    p.exited.connect(end)
+    p.runningChanged.connect(function() { if (!p.running && !p.launched) end() })
     p.running = true
   }
 

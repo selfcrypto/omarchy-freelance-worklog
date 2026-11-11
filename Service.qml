@@ -137,28 +137,48 @@ Item {
 
   // ------------------------------------------------------------ helper
 
-  property var queue: []
-  property var pending: null
+  // One call at a time through HelperRunner: bounded queue, each call settled
+  // exactly once (failed start, deadline, output cap included).
+  HelperRunner {
+    id: helperRunner
+    command: ["timeout", "-k", "3", "15", "python3", "-I", root.helper, "--stdin"]
+  }
+  readonly property bool helperBusy: helperRunner.busy
 
+  // Reads and heartbeats waiting merge with a newer one; a draft replaces a
+  // draft waiting last. A call over the queue's bound is refused on screen.
+  // Each helper answer is handled once, then every caller's done gets it.
   function run(args, done) {
-    queue = queue.concat([{ args: args, done: done || null }])
-    pump()
+    var key = args[0] === "view" || args[0] === "heartbeat" || args[0] === "draft" ? args[0] : ""
+    var reads = ["view", "month", "sessions", "heartbeat"].indexOf(args[0]) >= 0
+    var payload = JSON.stringify(args.concat(["--config", configJson]))
+    if (!helperRunner.run(payload, key, done || null, function(text, failure) { return root.handle(text, failure, reads) })) {
+      var r = handle("", "busy: too many changes waiting; try again in a moment", true)
+      if (Date.now() - lastBusyToastMs > 5000) {
+        lastBusyToastMs = Date.now()
+        notify("Worklog busy", "Too many changes waiting; the last one was not saved")
+      }
+      if (done) done(r)
+    }
   }
+  property double lastBusyToastMs: 0
 
-  function pump() {
-    if (pending || queue.length === 0) return
-    pending = queue[0]
-    queue = queue.slice(1)
-    helperProc.payload = JSON.stringify(pending.args.concat(["--config", configJson]))
-    helperProc.stdinEnabled = true
-    helperProc.running = true
-  }
-
-  function handle(text) {
-    var job = pending
-    pending = null
+  // reads: the call changes nothing. A change whose helper failed, was
+  // stopped or answered nothing readable may still have been written: say
+  // so, and show what the files hold now.
+  function handle(text, failure, reads) {
     var result = null
-    try { result = JSON.parse(String(text).trim().split("\n").pop()) } catch (e) { result = { ok: false, error: "helper failed", field: "" } }
+    if (!failure) {
+      try { result = JSON.parse(String(text).trim().split("\n").pop()) } catch (e) { result = null }
+      if (!result || typeof result !== "object") failure = "helper failed"
+    }
+    if (failure) {
+      if (!reads && failure !== "helper failed to start" && failure.indexOf("busy") !== 0) {
+        failure += "; the change may have been saved, check before trying again"
+        Qt.callLater(root.refresh)
+      }
+      result = { ok: false, error: failure, field: "" }
+    }
     if (result.ok && result.view) view = result.view
     if (result.ok) {
       lastError = ""
@@ -172,33 +192,13 @@ Item {
       notify("Worklog: data upgraded", "Your sessions now belong to one company. Set its name, billing cycle and terms in the panel (C).")
     if (result.ok && result.view && result.view.recovered)
       notify("Worklog data recovered", "An unreadable " + result.view.recovered.file + " was moved aside as " + result.view.recovered.movedTo)
-    try {
-      if (job && job.done) job.done(result)
-    } finally {
-      pump()
-    }
-  }
-
-  Process {
-    id: helperProc
-    property string payload: ""
-    command: ["timeout", "-k", "3", "15", "python3", "-I", root.helper, "--stdin"]
-    // Closing stdin (stdinEnabled false) is the helper's end of input.
-    onStarted: {
-      write(payload)
-      payload = ""
-      stdinEnabled = false
-    }
-    stdout: StdioCollector {
-      waitForEnd: true
-      onStreamFinished: root.handle(text)
-    }
+    return result
   }
 
   function refresh() { run(["view"]) }
 
   function notify(title, body) {
-    Quickshell.execDetached(["omarchy-notification-send", "-g", "󰔟", Model.clip(title, 80), Model.clip(body, 300)])
+    Quickshell.execDetached(["timeout", "-k", "2", "5", "omarchy-notification-send", "-g", "󰔟", Model.clip(title, 80), Model.clip(body, 300)])
   }
 
   function isoAt(ms) { return new Date(ms).toISOString().replace(/\.\d{3}Z$/, "Z") }
@@ -390,7 +390,7 @@ Item {
       // Day, week and month totals come from the helper: re-read them when
       // the local date changes, whatever the session state.
       var day = Model.localDateKey(now)
-      if (root.view && day !== root.view.today.date && !root.pending && root.queue.length === 0) root.refresh()
+      if (root.view && day !== root.view.today.date && !root.helperBusy) root.refresh()
       // An edit can move the end of the paused segment under the prompt.
       if (root.prompt && root.view.active) root.prompt = Object.assign({}, root.prompt, { awaySec: root.pauseSec, since: root.view.active.lastEnd })
       root.remind(now)
@@ -430,7 +430,15 @@ Item {
 
   Process {
     id: lockProbe
+    property bool launched: false
     command: ["timeout", "-k", "2", "4", "omarchy-hyprland-session-locked"]
+    onStarted: launched = true
+    // A probe that cannot start says nothing: undetermined, as exit 2.
+    onRunningChanged: {
+      if (running) return
+      if (!launched) { root.locked = false; root.checkReturn() }
+      launched = false
+    }
     onExited: function(exitCode) {
       root.locked = exitCode === 0
       if (root.locked && root.sessionState === "running" && root.pauseOnLock) root.pause("lock", Date.now())
@@ -493,16 +501,20 @@ Item {
   Timer {
     id: outsideChange
     interval: 800
-    onTriggered: if (!root.pending && root.queue.length === 0) root.refresh()
+    onTriggered: if (!root.helperBusy) root.refresh()
   }
   FileView {
     path: root.dataDir + "/active.json"
+    // Watched only: the contents are the helper's to read, never loaded here.
+    preload: false
     watchChanges: true
     printErrors: false
     onFileChanged: outsideChange.restart()
   }
   FileView {
     path: root.dataDir + "/worklog.json"
+    // Watched only: the contents are the helper's to read, never loaded here.
+    preload: false
     watchChanges: true
     printErrors: false
     onFileChanged: outsideChange.restart()
@@ -556,7 +568,7 @@ Item {
       return c ? c.name + " (" + c.id + ") · " + Model.cycleName(c.cycleDay) : ""
     }
     function companies(): string {
-      var list = root.view ? root.view.companies : []
+      var list = root.view ? root.view.companies.slice(0, 100) : []
       return JSON.stringify(list.map(function(c) {
         return { id: c.id, name: c.name, tag: c.tag, archived: c.archived, cycleDay: c.cycleDay, current: c.id === root.currentCompany }
       }))

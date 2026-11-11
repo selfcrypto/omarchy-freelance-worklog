@@ -16,8 +16,8 @@ Titles are never changed once cited from another file.
 
 ## Index
 
-- `Monthly package is the contract` · `CLAUDE.md`
-- `JSON files and a Python helper` · `CLAUDE.md`
+- `Monthly package is the contract` · `CLAUDE.md` (local guide, not published)
+- `JSON files and a Python helper` · `CLAUDE.md` (local guide, not published)
 
 ## 2026-10-27 · Built, not installed from the marketplace
 **Decision.** Own plugin. The closest ones (omaTime, Rimuru Time Tracker, OmaTrack) each miss the end-of-session summary with confirmation, a monthly package view or pause/resume.
@@ -240,3 +240,13 @@ Also, from the same pass: `edit-active` keeps segments under a minute and empty 
 **Decision.** `KeyField.paste` records the field's text, caret, selection and `pasteGeneration` when it starts and drops the clipboard's answer (after the types and after the text) when any of them changed. `dropPaste` bumps the generation and stops the `wl-paste` call; it runs when the field is hidden and when its text is set from outside (`ownEdit` false: a form reloaded for another company or session). Focus is not part of the check, and the paste path (types, cap, copy, cut) is unchanged.
 **Why.** HANCORE on #13941 (Low): a clipboard owner answering late, within the 2 s timeout, let a paste started in company A's form land in company B's after cancel and reopen, since the forms reuse their fields. `tests/paste/stale.qml` reproduces it on 0.3.9 ("company Blate").
 **Alternative rejected.** Checking focus at completion: misses returning to the same field in another form (HANCORE's note), and Omarchy's Super+V arrives as Shift+Insert, so a focus rule risked the paste fixes of 0.3.6 for no gain.
+
+## 2026-11-11 · Helper calls through HelperRunner, bounded ledger
+**Decision.** Every helper call goes through `HelperRunner.qml`: a process per call, settled once on exit (0 answered, 1 refused, anything else or a signal a failure), failed start (`runningChanged` without `started`), a 25 s watchdog or an 8 M character output cap; a stopped process is drained (5 s at most) before the next call. At most 32 calls wait; view and heartbeat merge with one waiting anywhere, a draft with one waiting last; billing changes are never merged and a refused one is said on screen (busy toast, at most every 5 s). A merged answer is parsed once. A write that failed after starting is reported as maybe saved and followed by a view. `worklog.py` reads and writes at most 64 MB (`WORKLOG_MAX_LEDGER_MB`), refusing a save that would pass it so the file stays readable and active.json writes (pause, stop) keep working; it opens data and lock files nonblocking and refuses non-regular ones; it prints ASCII JSON; view, sessions and month scan only segments that reach their windows. Companies and periods are capped at 100. The ledger stays one JSON file read whole under the budget: atomic replace and daily backups depend on it, and 64 MB is decades of sessions.
+**Why.** HANCORE's prerequisites on #13941 (2026-11-10): unbounded queue, failed launch never settled, whole-ledger reads and projections, agent files in the installed clone. The rest came from a checklist of his past reviews (`FailedToStart` in paste, copy and the lock probe, FIFO at a data path, detached toasts without a deadline, watchers loading the ledger) and from a blind Claude review that found output decoded per chunk (an accented character split at 64 KiB became U+FFFD, then saved back), exit codes ignored, the month page scanning all history, and saves able to pass the read bound.
+**Alternative rejected.** An archive or a database instead of one file: more moving parts for a ledger that grows a few hundred KB a year. A focus check for stale pastes and a byte-level paste reader: both touch the paste path Kike asked to keep unchanged; the per-read UTF-8 split in paste stays pending.
+
+## 2026-11-11 · Agent guides stay local in Omarchy plugins
+**Decision.** `CLAUDE.md` and `AGENTS.md` are git-ignored and removed from the repository; `AGENTS.md` stays a one-line file because `omarchy plugin validate` refuses a symlink in the folder even when git ignores it. Rules changed in `CLAUDE.md` are also recorded here. The exception is in `~/Work/repo-docs` (layout.md, CHANGELOG under v3) for every Omarchy plugin.
+**Why.** HANCORE on #13941: `omarchy plugin add` installs the whole clone, so root agent guides are installed instruction files. Kike chose to keep them local rather than move them.
+**Alternative rejected.** Moving the guide to `docs/agents.md`: the repo-docs layout and every session's automatic read depend on a root `CLAUDE.md`.

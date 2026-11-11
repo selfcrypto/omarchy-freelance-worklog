@@ -7,15 +7,16 @@ Budget 15 KB.
 
 | Thing | State |
 |---|---|
-| Version | 0.3.10 (carries 0.3.7 to 0.3.9) submitted in `[Verify]` #13941 on omacom/omarchy-plugin-marketplace, retargeted from 0.3.9 after HANCORE's stale paste finding (2026-11-10). 0.3.6 is the last verified (#13348) |
-| Tests | 96 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 40 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
+| Version | 0.3.11 (carries 0.3.7 to 0.3.10) for `[Verify]` #13941 on omacom/omarchy-plugin-marketplace, answering HANCORE's four prerequisites of 2026-11-10. 0.3.6 is the last verified (#13348) |
+| Tests | 104 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 40 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), helper runner (`tests/helper/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
 | Review | 0.3.8: first-look design pass, gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel, before the code (findings reproduced, built in; see decisions). The code itself is not reviewed. 0.3.6: gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel (4 + 7 findings, all reproduced, 9 fixed with tests; see decisions). Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
 
-1. 0.3.10 `[Verify]` #13941 open. Nothing goes to GitHub main while it is open or after it is approved; a new release retargets the open issue.
+1. 0.3.11 `[Verify]` #13941 open. Nothing goes to GitHub main while it is open or after it is approved; a new release retargets the open issue.
 2. Not yet checked live: the edit form on the live session (Enter, the pencil, Save, a pause while the form is open), the reminder toast, the light theme, chart clicks with a pointer. `Panel.qml` has no automated test.
-3. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
+3. Paste decodes each `wl-paste` read on its own, so an accented character cut between two reads arrives as two U+FFFD (since 0.3.0, rare: needs a clipboard owner writing in pieces). Fixing it means a byte-level reader; left alone in 0.3.11 to keep the paste path unchanged.
+4. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
 
 ## Standing facts
 
@@ -25,6 +26,7 @@ Budget 15 KB.
 
 ## Done
 
+- **2026-11-11.** 0.3.11: HANCORE's four prerequisites and the checklist built from his past reviews. `HelperRunner.qml` runs each helper call in its own process, settled once on exit, failed start, deadline or output cap, with a bounded queue (view and heartbeat merge, drafts merge at the end, one parse per answer) and a stopped process drained first; a failed or stopped write says it may have been saved and the panel re-reads. The helper reads and writes at most 64 MB (`WORKLOG_MAX_LEDGER_MB`), refuses FIFOs at its data and lock paths, prints ASCII JSON, scans only the weeks and cycles a view shows, caps companies and periods at 100. Paste, copy and the lock probe settle when their process cannot start. Data watchers no longer load the files; toasts run under `timeout`. `CLAUDE.md` and `AGENTS.md` are git-ignored. Reviewed by a blind Claude agent (8 findings, 7 fixed, the paste UTF-8 split left as pending 3); the Codex pass was cancelled (usage limit).
 - **2026-11-10.** 0.3.10: a paste lands only in the edit it was asked for. A late clipboard answer is dropped when the field's text, caret or selection changed, its text was replaced from outside (a form reloaded) or it was hidden, and hiding the field stops the read. HANCORE's Low finding on #13941, reproduced by `tests/paste/stale.qml` on 0.3.9.
 - **2026-11-04.** 0.3.9: the week guide's hours to go are capped by what keeps the package cycle on pace to Sunday. The guide's figure is then left out. A lead that covers the week reads "This week 8h 17m, nothing more needed to keep pace", a smaller one "1h 47m more keeps the cycle on pace". Behind pace and hourly cycles keep the guide's own figure.
 - **2026-11-02.** 0.3.8: the running or paused session can be edited (Enter or the pencil on the track page): times, summary, tags, company, in one write. A form opened before the session changed is refused. A start moved past its stored end is an error in every form (it used to drop the segment). Add segment starts on the first free minute. Pause reasons survive an edited start.

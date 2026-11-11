@@ -26,7 +26,8 @@
 | File | What it is for |
 |---|---|
 | `manifest.json` | Plugin manifest: service + bar widget, defaults, settings schema |
-| `Service.qml` | Owner of state, helper queue, automatic pauses, IPC, toasts |
+| `Service.qml` | Owner of state, helper calls (`run`, `handle`), automatic pauses, IPC, toasts |
+| `HelperRunner.qml` | Helper calls one at a time: a process per call, bounded queue (view and heartbeat merge, a draft merges at the end), each call settled once on exit, failed start, deadline or output cap, a stopped process drained before the next |
 | `Panel.qml` | Bar pill and the panel: track, away, review, editor, history, month and companies pages; `MoneyBlock`, `CompanyChips` |
 | `SessionEditor.qml` | Summary, tags, segment rows with live totals; review, edit, live and new modes |
 | `TimeField.qml` | HH:MM field whose text is not bound to its minutes; selected by a focusing click, places the ":" as digits are typed (`Model.autoColon`) |
@@ -66,4 +67,5 @@ v1 terms under `legacy`). The shell sends the whole list as JSON on stdin (`work
 | `tests/model.test.js` | Formatting, live totals, pace and money (prorated, hourly, mixed, extra hours), cycles (same cases as the helper), month page series, terms check, chart series, clock parsing, editor rows |
 | `tests/qml/tst_timefield.qml`, `tests/qml/tst_keyfield.qml` | Typing over a time keeps what is typed; KeyField typing, editing, limits, keys passed on, caret kept in view, dead keys, clicks placing the caret |
 | `tests/render/` | `run.sh` renders SessionEditor and WeekChart under `qs` (the shell's Commons and Ui linked in) at 280 and 400 px, dark and light, with long text, for a confirmed and a running session; fails on anything past the edges or a bar in two tones (`magick`), saves PNGs. The live cases drive the form (running row stays last and open, no summary needed) |
-| `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` that offers text/html first (`bin/`): the UTF-8 text type is asked for, the copy stops early, 4096 bytes kept; a fake `wl-copy` gets a copy on stdin only, and a cut whose copy fails keeps the text; `stale.qml` with a slow `wl-paste` (`WLPASTE_DELAY`): a late paste is dropped after a form reload, an edit or a closed form |
+| `tests/helper/` | `run.sh` runs HelperRunner under `qs` with sh one-liners: failed start then a normal call, a deadline with the stopped process drained, a full queue refused in order, merged reads, heartbeats and drafts, output past the cap and a large answer kept whole |
+| `tests/paste/` | `run.sh` runs KeyField under `qs` against a fake 8 MB `wl-paste` that offers text/html first (`bin/`): the UTF-8 text type is asked for, the copy stops early, 4096 bytes kept; a fake `wl-copy` gets a copy on stdin only, and a cut whose copy fails keeps the text; `stale.qml` with a slow `wl-paste` (`WLPASTE_DELAY`): a late paste is dropped after a form reload, an edit or a closed form; `failstart.qml` with no `timeout` on PATH: paste and copy settle and the field stays free |

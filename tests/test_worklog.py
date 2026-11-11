@@ -25,8 +25,8 @@ class Helper(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def run_cmd(self, *args, now=None, ok=True, config=None):
-        env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=now or self.now, WORKLOG_TZ="Europe/Madrid")
+    def run_cmd(self, *args, now=None, ok=True, config=None, env_extra=None):
+        env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=now or self.now, WORKLOG_TZ="Europe/Madrid", **(env_extra or {}))
         argv = list(args)
         # Fixtures assume a 40 h / 1.600 / 50 €/h package: seeded as v1 settings.
         config = dict(config or {})
@@ -36,8 +36,9 @@ class Helper(unittest.TestCase):
         # The way the shell calls it: the arguments as JSON on stdin.
         p = subprocess.run([sys.executable, "-I", HELPER, "--stdin"], input=json.dumps(argv), env=env, capture_output=True, text=True)
         result = json.loads(p.stdout)
-        self.assertEqual(result["ok"], ok, result)
-        self.assertEqual(p.returncode, 0 if ok else 1)
+        if ok is not None:
+            self.assertEqual(result["ok"], ok, result)
+            self.assertEqual(p.returncode, 0 if ok else 1)
         return result
 
     def log(self):
@@ -709,6 +710,116 @@ class Helper(unittest.TestCase):
         r = self.run_cmd("confirm", "--summary", "Nothing", now="2026-10-27T09:01:00Z", ok=False)
         self.assertIn("nothing worked", r["error"])
 
+    # -------------------------------------------------------------- bounds
+
+    def test_a_ledger_over_the_bound_is_refused_and_left_alone(self):
+        self.run_cmd("add", "--segments", json.dumps([{"start": "2026-10-26T08:00:00Z", "end": "2026-10-26T10:00:00Z"}]), "--summary", "kept")
+        log = self.log()
+        # Pad the ledger past 1 MB with a field the helper keeps as it is.
+        log["padding"] = "x" * (1 << 20)
+        path = os.path.join(self.dir, "worklog.json")
+        with open(path, "w") as f:
+            json.dump(log, f)
+        with open(path, "rb") as f:
+            before = f.read()
+        r = self.run_cmd("view", ok=False, env_extra={"WORKLOG_MAX_LEDGER_MB": "1"})
+        self.assertIn("over 1 MB", r["error"])
+        self.assertEqual(r["field"], "data")
+        with open(path, "rb") as f:
+            self.assertEqual(f.read(), before)
+        self.assertEqual([n for n in os.listdir(self.dir) if "corrupt" in n], [])
+        # A higher bound opens it, history intact.
+        v = self.run_cmd("view", env_extra={"WORKLOG_MAX_LEDGER_MB": "4"})["view"]
+        self.assertEqual(v["recent"][0]["summary"], "kept")
+
+    def test_old_sessions_leave_the_view_figures_alone(self):
+        recent = [{"start": "2026-10-26T08:00:00Z", "end": "2026-10-26T11:00:00Z"}]
+        self.run_cmd("add", "--segments", json.dumps(recent), "--summary", "recent")
+        before = self.run_cmd("view")["view"]
+        old = [{"start": "2025-03-03T08:00:00Z", "end": "2025-03-03T12:00:00Z"}]
+        self.run_cmd("add", "--segments", json.dumps(old), "--summary", "old")
+        after = self.run_cmd("view")["view"]
+        for k in ("week", "month", "trend", "today"):
+            self.assertEqual(after[k], before[k], k)
+        self.assertEqual(after["companies"][0]["sessionCount"], 2)
+        # The old work is still there for its own week.
+        r = self.run_cmd("sessions", "--week", "2025-W10")
+        self.assertEqual(r["sessions"]["figures"]["workedSec"], 4 * 3600)
+
+
+    def test_a_fifo_at_the_ledger_path_is_refused_without_hanging(self):
+        path = os.path.join(self.dir, "worklog.json")
+        os.mkfifo(path, 0o600)
+        started = time.monotonic()
+        r = self.run_cmd("view", ok=False)
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertIn("not a regular file", r["error"])
+        self.assertTrue(os.path.exists(path))
+        self.assertEqual([n for n in os.listdir(self.dir) if "corrupt" in n], [])
+
+    def test_a_dangling_link_at_a_report_name_is_skipped(self):
+        self.run_cmd("add", "--segments", json.dumps([{"start": "2026-10-26T08:00:00Z", "end": "2026-10-26T10:00:00Z"}]), "--summary", "x")
+        out = os.path.join(self.dir, "reports")
+        os.mkdir(out)
+        first = self.run_cmd("export", "--week", "this", "--out", out)["export"]
+        target = os.path.join(self.dir, "elsewhere.md")
+        name = os.path.basename(first["markdown"]).replace(".md", "-2.md")
+        os.symlink(target, os.path.join(out, name))
+        second = self.run_cmd("export", "--week", "this", "--out", out)["export"]
+        self.assertTrue(second["markdown"].endswith("-3.md"), second)
+        self.assertFalse(os.path.exists(target))
+
+    def test_the_answer_is_ascii_whatever_the_text(self):
+        segs = [{"start": "2026-10-26T08:00:00Z", "end": "2026-10-26T10:00:00Z"}]
+        self.run_cmd("add", "--segments", json.dumps(segs), "--summary", "Revisión del menú, año 2026 ñ € 😀")
+        env = dict(os.environ, WORKLOG_DATA_DIR=self.dir, WORKLOG_NOW=self.now, WORKLOG_TZ="Europe/Madrid")
+        argv = ["month", "--month", "this", "--company", "all", "--config", json.dumps({"legacy": FIXTURE_TERMS})]
+        p = subprocess.run([sys.executable, "-I", HELPER, "--stdin"], input=json.dumps(argv).encode(), env=env, capture_output=True)
+        self.assertTrue(all(b < 128 for b in p.stdout), "non-ASCII byte in the answer")
+        self.assertIn("Revisión del menú, año 2026 ñ € 😀", json.dumps(json.loads(p.stdout), ensure_ascii=False))
+
+    def test_a_save_past_the_bound_is_refused_and_the_session_still_stops(self):
+        env = {"WORKLOG_MAX_LEDGER_MB": "1"}
+        self.run_cmd("start", now="2026-10-27T08:00:00Z", env_extra=env)
+        path = os.path.join(self.dir, "worklog.json")
+        before = b""
+        for n in range(1000):
+            day = "2025-%02d-%02d" % (1 + n // 28 % 12, 1 + n % 28)
+            segs = [{"start": day + "T%02d:00:00Z" % (n // 336), "end": day + "T%02d:30:00Z" % (n // 336)}]
+            r = self.run_cmd("add", "--segments", json.dumps(segs), "--summary", "x" * 2000, now="2026-10-27T08:10:00Z", ok=None, env_extra=env)
+            if not r["ok"]:
+                self.assertIn("saving would take worklog.json over 1 MB", r["error"])
+                break
+            with open(path, "rb") as f:
+                before = f.read()
+        else:
+            self.fail("never refused")
+        self.assertLessEqual(len(before), 1 << 20)
+        with open(path, "rb") as f:
+            self.assertEqual(f.read(), before)
+        # The ledger stays readable, and the live session can still pause and stop.
+        self.run_cmd("view", env_extra=env)
+        self.run_cmd("pause", now="2026-10-27T09:00:00Z", env_extra=env)
+        self.run_cmd("resume", now="2026-10-27T09:05:00Z", env_extra=env)
+        self.run_cmd("stop", now="2026-10-27T09:30:00Z", env_extra=env)
+
+    def test_a_fifo_at_the_lock_path_is_refused_without_hanging(self):
+        os.mkfifo(os.path.join(self.dir, ".lock"), 0o600)
+        started = time.monotonic()
+        r = self.run_cmd("view", ok=False)
+        self.assertLess(time.monotonic() - started, 5)
+        self.assertIn("lock file", r["error"])
+
+    def test_old_sessions_leave_the_month_page_alone(self):
+        recent = [{"start": "2026-10-26T08:00:00Z", "end": "2026-10-26T11:00:00Z"}]
+        self.run_cmd("add", "--segments", json.dumps(recent), "--summary", "recent")
+        before = self.run_cmd("month", "--month", "this", "--company", "all")["month"]
+        old = [{"start": "2025-03-03T08:00:00Z", "end": "2025-03-03T12:00:00Z"}]
+        self.run_cmd("add", "--segments", json.dumps(old), "--summary", "old")
+        after = self.run_cmd("month", "--month", "this", "--company", "all")["month"]
+        self.assertEqual(after, before)
+        older = self.run_cmd("month", "--month", "2025-03", "--company", "all")["month"]
+        self.assertEqual(sum(d["workedSec"] for d in older["days"]), 4 * 3600)
 
 if __name__ == "__main__":
     unittest.main()

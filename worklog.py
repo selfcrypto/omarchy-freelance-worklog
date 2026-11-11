@@ -38,6 +38,7 @@ import os
 import re
 import secrets
 import shutil
+import stat
 import sys
 import tempfile
 from datetime import date, datetime, time, timedelta, timezone
@@ -46,9 +47,18 @@ from zoneinfo import ZoneInfo
 VERSION = 2
 MIN_SEGMENT_SEC = 60
 MAX_SUMMARY = 2000
+# Companies and contract periods are listed whole in every view.
+MAX_COMPANIES = 100
+MAX_PERIODS = 100
 MAX_TAG = 32
 MAX_TAGS = 10
 TREND_WEEKS = 8
+# The most the helper reads or writes of a data file. A save that would pass
+# it is refused, nothing changed, so the ledger always stays readable; a
+# larger file (written by hand, or under a higher bound) is refused with its
+# size. WORKLOG_MAX_LEDGER_MB raises the bound (README). Old sessions are
+# never dropped to fit.
+MAX_LEDGER_MB = 64
 RECENT = 3
 BACKUPS_KEPT = 30
 END_REASONS = ("manual", "lock", "idle", "suspend", "restart", "stop", "edited")
@@ -506,9 +516,16 @@ class Store:
         self.cfg = cfg
         self.now = now
         lock_path = os.path.join(self.dir, ".lock")
-        if os.path.islink(lock_path):
-            raise Refusal("lock file is a symlink: " + lock_path)
-        self._lock = open(lock_path, "a")
+        # No link followed and no blocking open: a FIFO or a link at the lock
+        # path is refused instead of hanging the helper.
+        try:
+            fd = os.open(lock_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NONBLOCK | os.O_NOFOLLOW, 0o600)
+        except OSError as e:
+            raise Refusal("lock file %s cannot be opened: %s" % (lock_path, e.strerror))
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            os.close(fd)
+            raise Refusal("lock file is not a regular file: " + lock_path)
+        self._lock = os.fdopen(fd, "a")
         fcntl.flock(self._lock, fcntl.LOCK_EX)
         try:
             self.log = self._load_log()
@@ -528,8 +545,18 @@ class Store:
             self._lock = None
 
     def _read_json(self, path):
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
+        limit = ledger_limit_bytes()
+        # Nonblocking and regular files only: a FIFO or device at the data
+        # path is refused instead of hanging the helper.
+        fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as f:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise Refusal("%s is not a regular file; nothing was changed" % os.path.basename(path), "data")
+            raw = f.read(limit + 1)
+        if len(raw) > limit:
+            raise Refusal("%s is over %d MB, the most the helper reads; nothing was changed. "
+                          "Set WORKLOG_MAX_LEDGER_MB higher to open it" % (os.path.basename(path), limit >> 20), "data")
+        return json.loads(raw.decode("utf-8"))
 
     def _set_aside(self, path):
         aside = "%s.corrupt-%d" % (path, int(now_utc().timestamp()))
@@ -635,11 +662,15 @@ class Store:
         return active
 
     def _write(self, path, obj):
+        data = (json.dumps(obj, ensure_ascii=False, indent=1) + "\n").encode("utf-8")
+        limit = ledger_limit_bytes()
+        if len(data) > limit:
+            raise Refusal("saving would take %s over %d MB, the most the helper reads; nothing was changed. "
+                          "Set WORKLOG_MAX_LEDGER_MB higher (README)" % (os.path.basename(path), limit >> 20), "data")
         fd, tmp = tempfile.mkstemp(dir=self.dir, prefix=".tmp-")
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(obj, f, ensure_ascii=False, indent=1)
-                f.write("\n")
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
                 f.flush()
                 os.fsync(f.fileno())
             os.replace(tmp, path)
@@ -775,11 +806,20 @@ def cycle_label(cycle_day, first, last, lang="en"):
     return "%d %s to %d %s %d" % (first.day, mon[first.month - 1], last.day, mon[last.month - 1], last.year)
 
 
-def company_row(store, c, today):
+def session_counts(store):
+    counts = {}
+    for s in store.log["sessions"]:
+        counts[s.get("company")] = counts.get(s.get("company"), 0) + 1
+    return counts
+
+
+def company_row(store, c, today, counts=None):
+    if counts is None:
+        counts = session_counts(store)
     return {
         "id": c["id"], "name": c["name"], "tag": c["tag"], "archived": bool(c.get("archived")),
         "cycleDay": c["cycleDay"], "contracts": c["contracts"], "inForce": terms_on(c, today),
-        "sessionCount": sum(1 for s in store.log["sessions"] if s.get("company") == c["id"]),
+        "sessionCount": counts.get(c["id"], 0),
     }
 
 
@@ -907,13 +947,26 @@ def new_id(now):
 
 # ---------------------------------------------------------------- aggregation
 
-def all_segments(store, include_active, now, company=None):
+def ledger_limit_bytes():
+    try:
+        mb = int(os.environ.get("WORKLOG_MAX_LEDGER_MB", MAX_LEDGER_MB))
+    except ValueError:
+        mb = MAX_LEDGER_MB
+    return max(1, mb) << 20
+
+
+def all_segments(store, include_active, now, company=None, since=None):
     """Closed segments of the confirmed sessions and, when asked, of the live
-    one (its open segment is the panel's to add). company: an id or None."""
+    one (its open segment is the panel's to add). company: an id or None.
+    since: a UTC datetime; segments that ended before it are left out, so a
+    view over recent weeks does not gather the whole history."""
     out = []
     for s in store.log["sessions"]:
         if company is None or s.get("company") == company:
-            out.extend(s["segments"])
+            if since is None:
+                out.extend(s["segments"])
+            else:
+                out.extend(seg for seg in s["segments"] if not seg.get("end") or parse_iso(seg["end"]) > since)
     if include_active and store.active:
         if company is None or store.active["session"].get("company") == company:
             out.extend(seg for seg in store.active["session"]["segments"] if seg.get("end"))
@@ -1107,11 +1160,16 @@ def build_view(store, now):
     monday = week_monday(today)
     company = current_company(store)
     cid = company["id"]
-    mine = all_segments(store, True, now, cid)
-    every = all_segments(store, True, now)
+    # Only the weeks and the cycle the view shows: the trend's first Monday or
+    # the cycle's first day, whichever is earlier.
+    ckey = cycle_of(company["cycleDay"], today)
+    since = day_start(min(monday - timedelta(weeks=TREND_WEEKS - 1), cycle_bounds(company["cycleDay"], ckey)[0]))
+    mine = all_segments(store, True, now, cid, since)
+    every = all_segments(store, True, now, None, day_start(today))
     week = week_figures(mine, monday, today, guide_on(company, today), now)
     week["company"] = cid
-    month = cycle_figures(company, cycle_of(company["cycleDay"], today), mine, today, now)
+    month = cycle_figures(company, ckey, mine, today, now)
+    counts = session_counts(store)
     month["money"] = money(month, month["workedSec"])
     trend = []
     for i in range(TREND_WEEKS - 1, -1, -1):
@@ -1147,7 +1205,7 @@ def build_view(store, now):
         "announced": store.active.get("announced", True) if store.active else True,
         "active": active,
         "currentCompany": cid,
-        "companies": [company_row(store, c, today) for c in companies_sorted(store)],
+        "companies": [company_row(store, c, today, counts) for c in companies_sorted(store)],
         "today": {
             "date": today.isoformat(),
             "startAt": iso(day_start(today)),
@@ -1458,6 +1516,8 @@ def cmd_company(store, args, now):
     action = args.action
     today = local(now).date()
     if action == "add":
+        if len(store.log["companies"]) >= MAX_COMPANIES:
+            raise Refusal("at most %d companies; archive or delete one first" % MAX_COMPANIES, "name")
         name = clean_name(args.name)
         check_name_free(store, name)
         tag = clean_tag(args.tag, name)
@@ -1550,6 +1610,8 @@ def cmd_contract(store, args, now):
                 raise Refusal("no terms from " + moved, "from")
             if any(k["from"] == start for k in contracts):
                 raise Refusal("other terms already start on " + start, "from")
+        if len(contracts) >= MAX_PERIODS and not any(k["from"] in (start, moved) for k in contracts):
+            raise Refusal("at most %d periods of terms per company" % MAX_PERIODS, "from")
         contracts[:] = [k for k in contracts if k["from"] not in (start, moved)] + [dict({"from": start}, **terms)]
         contracts.sort(key=lambda k: k["from"])
         check_currency_cuts(company)
@@ -1586,7 +1648,7 @@ def cmd_sessions(store, args, now, cfg):
     monday = week_monday(today) if key == "this" else monday_of_key(key)
     last = monday + timedelta(days=6)
     rows = [session_row(s, now) for s in sessions_in(store, monday, last, now)][::-1]
-    fig = week_figures(all_segments(store, True, now), monday, today, guide_on(current_company(store), monday), now)
+    fig = week_figures(all_segments(store, True, now, None, day_start(monday)), monday, today, guide_on(current_company(store), monday), now)
     return {"kind": "week", "key": week_key(monday), "first": monday.isoformat(), "last": last.isoformat(),
             "figures": fig, "sessions": rows}
 
@@ -1610,12 +1672,18 @@ def cmd_month(store, args, now):
     else:
         first, last = month_bounds(key)
         cid = None
-    segs = all_segments(store, True, now, cid)
+    # Only the segments and sessions that reach this period.
+    since, until = day_start(first), day_start(last + timedelta(days=1))
+    segs = all_segments(store, True, now, cid, since)
     # A session is listed under every day it has work on, so a session that
     # runs past midnight (or in from the last cycle) shows where its hours count.
     by_day = {}
     for sess in store.log["sessions"]:
         if cid is not None and sess.get("company") != cid:
+            continue
+        a, _ = seg_bounds(sess["segments"][0], now)
+        _, b = seg_bounds(sess["segments"][-1], now)
+        if b < since or a > until:
             continue
         r = session_row(sess, now)
         for d in session_days(sess) or [r["date"]]:
@@ -1635,16 +1703,19 @@ def cmd_month(store, args, now):
     # All companies: each with its cycle that starts in this month (the
     # calendar month itself for cycleDay 1), when it has work in it.
     shown = [company] if company else []
-    if not company:
-        for c in companies_sorted(store):
-            a, b = cycle_bounds(c["cycleDay"], key)
-            if sec_between(all_segments(store, True, now, c["id"]), day_start(a), day_start(b + timedelta(days=1)), now) > 0 \
-                    or (store.active and store.active["session"].get("company") == c["id"]):
-                shown.append(c)
+    cycle_segs = {}
+    for c in companies_sorted(store) if not company else []:
+        a, b = cycle_bounds(c["cycleDay"], key)
+        cycle_segs[c["id"]] = all_segments(store, True, now, c["id"], day_start(a))
+        if sec_between(cycle_segs[c["id"]], day_start(a), day_start(b + timedelta(days=1)), now) > 0 \
+                or (store.active and store.active["session"].get("company") == c["id"]):
+            shown.append(c)
     companies = []
     for c in shown:
         ckey = key
-        fig = cycle_figures(c, ckey, all_segments(store, True, now, c["id"]), today, now)
+        if c["id"] not in cycle_segs:
+            cycle_segs[c["id"]] = all_segments(store, True, now, c["id"], day_start(cycle_bounds(c["cycleDay"], ckey)[0]))
+        fig = cycle_figures(c, ckey, cycle_segs[c["id"]], today, now)
         fig["money"] = money(fig, fig["workedSec"])
         companies.append({"id": c["id"], "name": c["name"], "tag": c["tag"], "archived": bool(c.get("archived")), "figures": fig})
     weeks = []
@@ -2125,7 +2196,9 @@ def write_report(out_dir, stem, rep, rows, cfg):
     second export of a period is `-2` in every format."""
     exts = [".csv", ".md"] + ([".html"] if cfg["reportHtml"] else [])
     base, n = stem, 2
-    while any(os.path.exists(os.path.join(out_dir, base + ext)) for ext in exts):
+    # lexists: a dangling link at a report's name counts as taken (the files
+    # are created exclusively, never through a link).
+    while any(os.path.lexists(os.path.join(out_dir, base + ext)) for ext in exts):
         base, n = "%s-%d" % (stem, n), n + 1
     files = {}
     files["csv"] = os.path.join(out_dir, base + ".csv")
@@ -2286,7 +2359,9 @@ def main(argv=None):
     except Exception as e:  # the shell needs one JSON line whatever happens
         result = {"ok": False, "error": "internal error: %s: %s" % (type(e).__name__, str(e)[:200]), "field": ""}
         code = 1
-    sys.stdout.write(json.dumps(result, ensure_ascii=False) + "\n")
+    # ASCII only: the shell reads the answer in chunks, and an escaped
+    # character can never be cut in half between two reads.
+    sys.stdout.write(json.dumps(result, ensure_ascii=True) + "\n")
     return code
 
 

@@ -5,12 +5,13 @@
 # 1 MB) and keep 4096 bytes of UTF-8, cut at a whole character. A fake
 # wl-copy checks a copy sends the selection on stdin, never as an argument,
 # and that a cut whose copy fails keeps the text. A late paste lands only in
-# the edit it was asked for (stale.qml).
+# the edit it was asked for (stale.qml). Clipboard processes that cannot start
+# settle and leave the field free (failstart.qml).
 set -eu
 here=$(cd -- "$(dirname -- "$0")" && pwd)
 scratch=$(mktemp -d)
 trap 'rm -rf -- "$scratch"' EXIT
-cp "$here/../../KeyField.qml" "$here/paste.qml" "$here/copy.qml" "$here/stale.qml" "$scratch/"
+cp "$here/../../KeyField.qml" "$here/paste.qml" "$here/copy.qml" "$here/stale.qml" "$here/failstart.qml" "$scratch/"
 mkdir -m 700 "$scratch/runtime"
 fail=0
 check() {  # character, expected characters kept
@@ -41,4 +42,10 @@ stale=$(grep -o 'STALE .*' "$scratch/out" || true)
 echo "${stale:-STALE no result}"
 want='STALE {"kept":"A late","reloadEarly":"company B","reloadLate":"company B","typed":"summary!","hidden":"company A","hiddenStopped":true}'
 [ "$stale" = "$want" ] || fail=1
+mkdir "$scratch/emptybin"
+PATH="$scratch/emptybin" QT_QPA_PLATFORM=offscreen \
+  XDG_RUNTIME_DIR="$scratch/runtime" "$(command -v timeout)" 10 "$(command -v qs)" -p "$scratch/failstart.qml" --no-color > "$scratch/out" 2>&1 || true
+failstart=$(grep -o 'FAILSTART .*' "$scratch/out" || true)
+echo "${failstart:-FAILSTART no result}"
+[ "$failstart" = 'FAILSTART {"events":["freed","freed"],"text":"keep","cut":"unsaved note"}' ] || fail=1
 [ "$fail" -eq 0 ] && echo ok || { echo FAIL; exit 1; }
