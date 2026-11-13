@@ -250,3 +250,8 @@ Also, from the same pass: `edit-active` keeps segments under a minute and empty 
 **Decision.** `CLAUDE.md` and `AGENTS.md` are git-ignored and removed from the repository; `AGENTS.md` stays a one-line file because `omarchy plugin validate` refuses a symlink in the folder even when git ignores it. Rules changed in `CLAUDE.md` are also recorded here. The exception is in `~/Work/repo-docs` (layout.md, CHANGELOG under v3) for every Omarchy plugin.
 **Why.** HANCORE on #13941: `omarchy plugin add` installs the whole clone, so root agent guides are installed instruction files. Kike chose to keep them local rather than move them.
 **Alternative rejected.** Moving the guide to `docs/agents.md`: the repo-docs layout and every session's automatic read depend on a root `CLAUDE.md`.
+
+## 2026-11-13 · Report summaries keep their lines
+**Decision.** In the Markdown and HTML reports a summary keeps the lines it was written with, trimmed and without blank lines; each newline is a `<br>` in the table cell. The CSV keeps the summary unchanged, as before.
+**Why.** Kike: summaries written as a list ("- one", "- two") came out as one run-on paragraph in the exported report, since `one_line` joined the lines and added full stops.
+**Alternative rejected.** A Markdown list inside the cell: tables take no block markup, and `<br>` is the line break GFM renders in a cell.

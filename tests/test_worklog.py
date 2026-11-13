@@ -373,7 +373,9 @@ class Helper(unittest.TestCase):
         with open(r["markdown"], encoding="utf-8") as f:
             md = f.read()
         self.assertIn("week 44", md)
-        self.assertIn("| Tue 27 Oct | 09:00 to 11:07 | 2h 07m | a | Line one, with comma. Line two. |", md)
+        self.assertIn("| Tue 27 Oct | 09:00 to 11:07 | 2h 07m | a | Line one, with comma<br>Line two |", md)
+        with open(r["html"], encoding="utf-8") as f:
+            self.assertIn("<td>Line one, with comma<br>Line two</td>", f.read())
         again = self.run_cmd("export", "--week", "this", "--out", self.out)["export"]
         self.assertTrue(again["csv"].endswith("worklog-2026-W44-2.csv"))
 
@@ -385,7 +387,7 @@ class Helper(unittest.TestCase):
         with open(r["markdown"], encoding="utf-8") as f:
             md = f.read()
         self.assertIn("octubre de 2026", md)
-        self.assertIn("| mar 27 oct | 09:00 a 11:08 | 2h 15m |  | Hecho. |", md)
+        self.assertIn("| mar 27 oct | 09:00 a 11:08 | 2h 15m |  | Hecho |", md)
         self.assertIn("1.600,00 € + IVA 21 % (336,00 €) = 1.936,00 €", md)
         self.assertIn("2.000,00 €", md)
         self.assertIn("400,00 € (20,0 %)", md)

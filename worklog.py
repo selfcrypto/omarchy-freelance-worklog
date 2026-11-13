@@ -1964,13 +1964,10 @@ def write_csv(path, rows):
         f.write(buf.getvalue())
 
 
-def one_line(text):
-    parts = []
-    for line in text.splitlines():
-        line = line.strip()
-        if line:
-            parts.append(line if line[-1] in ".!?:;" else line + ".")
-    return " ".join(parts)
+def summary_lines(text):
+    """The summary's lines as written, trimmed, blank lines dropped, joined by
+    newlines. Markdown and HTML show each newline as a line break."""
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
 
 def terms_text(terms, t, lang):
@@ -1995,7 +1992,7 @@ def table_rows(rows, t, with_company):
         if with_company:
             cells.append(r["company"])
         cells += ["%s %s %s" % (r["start"].strftime("%H:%M"), t["to"], r["end"].strftime("%H:%M")),
-                  fmt_duration(r["worked"]), ", ".join(r["tags"]), one_line(r["summary"])]
+                  fmt_duration(r["worked"]), ", ".join(r["tags"]), summary_lines(r["summary"])]
         out.append(cells)
     return out
 
@@ -2121,7 +2118,7 @@ def render_markdown(rep):
         lines.append("| " + " | ".join(e(c) for c in rep["columns"]) + " |")
         lines.append("|" + "---|" * len(rep["columns"]))
         for cells in rep["rows"]:
-            lines.append("| " + " | ".join(e(c) for c in cells) + " |")
+            lines.append("| " + " | ".join(e(c).replace("\n", "<br>") for c in cells) + " |")
     else:
         lines.append(e(rep["empty"]))
     lines.append("")
@@ -2180,7 +2177,7 @@ def render_html(rep):
             tds = []
             for i, c in enumerate(cells):
                 cls = ' class="num"' if i == hours_col else (' class="nowrap"' if i < hours_col else "")
-                tds.append("<td%s>%s</td>" % (cls, e(c)))
+                tds.append("<td%s>%s</td>" % (cls, e(c).replace("\n", "<br>")))
             body.append("<tr>%s</tr>" % "".join(tds))
         table = "<table>\n<thead><tr>%s</tr></thead>\n<tbody>\n%s\n</tbody>\n</table>" % (head, "\n".join(body))
     else:
