@@ -223,7 +223,9 @@ class Companies(unittest.TestCase):
         r = self.run_cmd("export", "--month", "this", "--out", self.out)["export"]
         with open(r["markdown"]) as fh:
             md = fh.read()
-        self.assertIn("Billed at 50,00 €/h: 500,00 € + VAT 21 % (105,00 €) = 605,00 €.", md)
+        self.assertIn("| Hours worked | 10h | 50,00 €/h | 500,00 € |", md)
+        self.assertIn("| VAT 21 % |  |  | 105,00 € |", md)
+        self.assertIn("| Total |  |  | 605,00 € |", md)
         self.assertNotIn("owed", md)
         bad = self.run_cmd("contract", "--action", "set", "--id", "c_0001", "--from", "2026-10-01",
                            "--terms", json.dumps({"billing": "package", "monthlyHours": 0}), ok=False)
@@ -394,7 +396,7 @@ class Companies(unittest.TestCase):
             md = f.read()
         self.assertIn("Terms from 16 Nov 2026: package of 50h a cycle", md)
         self.assertIn("No terms before 6 Nov 2026: 2h not billed.", md)
-        self.assertIn("Total:", md)
+        self.assertIn("| Total |", md)
         self.terms("c_0001", "2026-11-01", monthlyHours=40, monthlyFee=1600, now=now)
         r = self.run_cmd("export", "--month", "2026-11", "--out", self.out, now=now)["export"]
         with open(r["markdown"]) as f:
@@ -412,16 +414,35 @@ class Companies(unittest.TestCase):
         r = self.run_cmd("export", "--month", "2026-10", "--out", self.out)["export"]
         with open(r["markdown"]) as f:
             md = f.read()
-        self.assertIn("Package fee: 500,00 €.", md)
-        self.assertIn("Extra hours: 2h at 45,00 €/h = 90,00 €.", md)
-        self.assertIn("Total: 590,00 € + VAT 21 % (123,90 €) = 713,90 €.", md)
+        # Every amount before VAT, each row against the standard rate (50).
+        self.assertEqual((m["packageValue"], m["packageDiscount"], m["packageRate"]), (500, 0, 50))
+        self.assertEqual((m["overageValue"], m["overageDiscount"], m["standardValue"]), (100, 10, 600))
+        self.assertIn("| Concept | Hours | Rate | At 50,00 €/h | Discount | Billed |", md)
+        self.assertIn("| Package | 10h | 50,00 €/h | 500,00 € |  | 500,00 € |", md)
+        self.assertIn("| Extra hours | 2h | 45,00 €/h | 100,00 € | -10,00 € (10,0 %) | 90,00 € |", md)
+        self.assertIn("| Subtotal before VAT | 12h |  | 600,00 € | -10,00 € (1,7 %) | 590,00 € |", md)
+        self.assertIn("| VAT 21 % |  |  |  |  | 123,90 € |", md)
+        self.assertIn("| Total |  |  |  |  | 713,90 € |", md)
+        self.assertNotIn("= 713,90", md)
+        with open(r["html"], encoding="utf-8") as f:
+            page = f.read()
+        self.assertIn('<tr class="total"><td>Total</td>', page)
+        self.assertIn('<td class="num">-10,00 € (10,0 %)</td>', page)
+        plain = self.run_cmd("export", "--month", "2026-10", "--out", self.out, config={"reportShowDiscount": False})["export"]
+        with open(plain["markdown"]) as f:
+            md = f.read()
+        self.assertIn("| Concept | Hours | Rate | Billed |", md)
+        self.assertIn("| Extra hours | 2h | 45,00 €/h | 90,00 € |", md)
         self.run_cmd("overage", "--action", "waive", "--id", "c_0001", "--month", "2026-10")
         m = self.figures("2026-10", "c_0001")["money"]
         self.assertTrue(m["overageWaived"])
         self.assertEqual((m["net"], m["gross"]), (500, 605))
         r = self.run_cmd("export", "--month", "2026-10", "--out", self.out, config={"reportLanguage": "es"})["export"]
         with open(r["markdown"]) as f:
-            self.assertIn("Horas extra: 2h a 45,00 €/h = 90,00 €, no facturadas.", f.read())
+            md = f.read()
+        self.assertIn("| Horas extra | 2h | no facturadas | 100,00 € | -100,00 € (100,0 %) | 0,00 € |", md)
+        self.assertIn("| Subtotal sin IVA | 12h |  | 600,00 € | -100,00 € (16,7 %) | 500,00 € |", md)
+        self.assertIn("| Total |  |  |  |  | 605,00 € |", md)
         self.run_cmd("overage", "--action", "bill", "--id", "c_0001", "--month", "2026-10")
         self.assertEqual(self.figures("2026-10", "c_0001")["money"]["net"], 590)
         self.assertEqual(self.run_cmd("overage", "--action", "waive", "--id", "c_0001", "--month", "x", ok=False)["field"], "month")
@@ -446,9 +467,10 @@ class Companies(unittest.TestCase):
         r = self.run_cmd("export", "--month", "2026-11", "--out", self.out, now=now)["export"]
         with open(r["markdown"]) as f:
             md = f.read()
-        self.assertIn("1 to 15 Nov, 1h at 50,00 €/h: 50,00 €.", md)
-        self.assertIn("16 to 30 Nov, 1h at 100,00 €/h: 100,00 €.", md)
-        self.assertIn("Total: 150,00 €", md)
+        self.assertIn("| 1 to 15 Nov, hourly | 1h | 50,00 €/h | 50,00 € |", md)
+        self.assertIn("| 16 to 30 Nov, hourly | 1h | 100,00 €/h | 100,00 € |", md)
+        self.assertIn("| Subtotal before VAT | 2h |  | 150,00 € |", md)
+        self.assertIn("| Total |  |  | 150,00 € |", md)
 
     def test_currency_changes_only_on_a_cycle_start(self):
         # F3: two currencies never add up in one cycle.

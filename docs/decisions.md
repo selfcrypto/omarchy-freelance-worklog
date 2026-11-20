@@ -255,3 +255,8 @@ Also, from the same pass: `edit-active` keeps segments under a minute and empty 
 **Decision.** In the Markdown and HTML reports a summary keeps the lines it was written with, trimmed and without blank lines; each newline is a `<br>` in the table cell. The CSV keeps the summary unchanged, as before.
 **Why.** Kike: summaries written as a list ("- one", "- two") came out as one run-on paragraph in the exported report, since `one_line` joined the lines and added full stops.
 **Alternative rejected.** A Markdown list inside the cell: tables take no block markup, and `<br>` is the line break GFM renders in a cell.
+
+## 2026-11-20 · Report totals are a table before VAT
+**Decision.** The monthly report's totals are one sentence with the hours and a table: a row per concept (Package, Extra hours, or each terms span in a mixed cycle) with hours, rate, value at the standard rate, discount and billed amount, all before VAT, then Subtotal before VAT (with two or more rows), VAT and Total. The package and the extra hours each carry their own discount against the standard rate; `money()` gives `packageValue`, `packageDiscount`, `packageRate`, `overageValue`, `overageDiscount`, and `standardValue` is the sum of the two rounded values so the rows add up. Waived extra hours are a row billed at 0 with the whole value as discount. `reportShowDiscount` off drops the two standard-rate columns.
+**Why.** Kike, 2026-11-20: the totals mixed amounts with and without VAT (only the last figure of the Total line had it) and one "Package discount" figure hid the discount on the extra hours.
+**Alternative rejected.** Sentences with each amount labelled "before VAT": Kike chose the table.

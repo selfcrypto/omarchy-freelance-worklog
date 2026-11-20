@@ -256,7 +256,8 @@ function money(fig, workedSec) {
   vat = round2(vat)
   var out = {
     billing: fig.billing, fee: fee, lines: lines, projected: false, standardValue: null, discount: null,
-    discountPercent: null, effectiveRate: null, overSec: 0, overageRate: 0, overageNet: 0, overageWaived: false
+    discountPercent: null, effectiveRate: null, overSec: 0, overageRate: 0, overageNet: 0, overageWaived: false,
+    packageValue: null, packageDiscount: null, packageRate: null, overageValue: null, overageDiscount: null
   }
   if (fig.billing === "package") {
     var hours = workedSec / 3600
@@ -269,8 +270,17 @@ function money(fig, workedSec) {
       vat = round2(vat + round2(overNet * (fig.overageVat || 0) / 100))
     }
     var basis = Math.max(hours, owed)
-    var value = basis * fig.standardRate
+    // The package and the extra hours at the standard rate, each to the cent
+    // (the report's rows add up to its subtotal).
+    var packageValue = round2(owed * fig.standardRate)
+    var overValue = round2(overSec / 3600 * fig.standardRate)
+    var value = packageValue + overValue
     var discount = Math.max(0, value - net)
+    out.packageValue = packageValue
+    out.packageDiscount = round2(packageValue - fee)
+    out.packageRate = owed > 0 ? round2(fee / owed) : null
+    out.overageValue = overValue
+    out.overageDiscount = round2(overValue - (fig.waived ? 0 : overNet))
     out.projected = hours < owed
     out.standardValue = round2(value)
     out.discount = round2(discount)

@@ -108,8 +108,11 @@ test("month pace and money", () => {
   // The 20 h over are billed at the extra hour rate (the standard rate when unset).
   assert.deepStrictEqual([over.fee, over.overageNet, over.net], [1600, 1000, 2600])
   assert.strictEqual(over.effectiveRate, 43.33)
+  // Each row against the standard rate: 40 h are 2.000 (400 off), the 20 h over 1.000 (none off).
+  assert.deepStrictEqual([over.packageValue, over.packageDiscount, over.packageRate, over.overageValue, over.overageDiscount], [2000, 400, 40, 1000, 0])
   const waived = M.money(Object.assign({}, fig, { waived: true, overageRate: 45, overageVat: 21 }), 60 * 3600)
   assert.deepStrictEqual([waived.overageNet, waived.net, waived.gross, waived.overageWaived], [900, 1600, 1936, true])
+  assert.deepStrictEqual([waived.overageValue, waived.overageDiscount, waived.standardValue, waived.discount], [1000, 1000, 3000, 1400])
   // 1.600 + 20 h at 45; VAT 336 on the fee and 189 on the extra hours.
   const billed = M.money(Object.assign({}, fig, { overageRate: 45, overageVat: 21 }), 60 * 3600)
   assert.deepStrictEqual([billed.net, billed.vat, billed.gross], [2500, 525, 3025])

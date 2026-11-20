@@ -1096,6 +1096,8 @@ def money(fig, worked_sec_value, part_worked=None):
         "billing": fig["billing"], "fee": fee, "lines": lines, "projected": False, "basisHours": round(hours, 4),
         "standardValue": None, "discount": None, "discountPercent": None, "effectiveRate": None,
         "overHours": 0, "overSec": 0, "overageRate": 0, "overageNet": 0.0, "overageWaived": False,
+        "packageValue": None, "packageDiscount": None, "packageRate": None,
+        "overageValue": None, "overageDiscount": None,
     }
     if fig["billing"] == "package":
         owed = fig["targetSec"] / 3600
@@ -1106,9 +1108,18 @@ def money(fig, worked_sec_value, part_worked=None):
             net = cents(net + over_net)
             vat = cents(vat + cents(over_net * fig.get("overageVat", 0) / 100))
         basis = max(hours, owed)
-        value = basis * fig["standardRate"]
+        # The package and the extra hours at the standard rate, each to the
+        # cent, so the report's rows add up to its subtotal.
+        package_value = cents(owed * fig["standardRate"])
+        over_value = cents(over_sec / 3600 * fig["standardRate"])
+        value = package_value + over_value
         discount = max(0.0, value - net)
         out.update({
+            "packageValue": package_value,
+            "packageDiscount": cents(package_value - fee),
+            "packageRate": cents(fee / owed) if owed > 0 else None,
+            "overageValue": over_value,
+            "overageDiscount": cents(over_value - (0.0 if waived else over_net)),
             "projected": hours < owed,
             "basisHours": round(basis, 4),
             "standardValue": cents(value),
@@ -1773,18 +1784,19 @@ TEXT = {
         "over": "{diff} over the package.",
         "even": "On the package.",
         "worked": "Worked: {worked}.",
-        "fee": "Fee: {net} + VAT {vat} % ({vat_amount}) = {gross}.",
-        "package_fee": "Package fee: {fee}.",
-        "extra_billed": "Extra hours: {hours} at {rate}/h = {net}.",
-        "extra_waived": "Extra hours: {hours} at {rate}/h = {net}, waived.",
-        "total_vat": "Total: {net} + VAT {vat} % ({vat_amount}) = {gross}.",
-        "fee_mixed_vat": "Fee: {net} + VAT ({vat_amount}) = {gross}.",
-        "billed": "Billed at {rate}/h: {net} + VAT {vat} % ({vat_amount}) = {gross}.",
-        "line_package": "{span}, package: {net}.",
-        "line_hourly": "{span}, {hours} at {rate}/h: {net}.",
-        "line_none": "{span}, no terms: {hours} not billed.",
-        "total": "Total: {net} + VAT ({vat_amount}) = {gross}.",
-        "value": "Value at the standard rate ({rate}/h): {value}. Package discount: {discount} ({pct} %).",
+        "money_columns": ["Concept", "Hours", "Rate", "At {rate}/h", "Discount", "Billed"],
+        "row_package": "Package",
+        "row_extra": "Extra hours",
+        "row_hours": "Hours worked",
+        "row_span_package": "{span}, package",
+        "row_span_hourly": "{span}, hourly",
+        "row_span_none": "{span}, no terms",
+        "waived": "waived",
+        "not_billed": "not billed",
+        "subtotal": "Subtotal before VAT",
+        "vat_row": "VAT {vat} %",
+        "vat_plain": "VAT",
+        "total_row": "Total",
         "week_total": "Total: {worked} of {guide}.",
         "week_total_plain": "Total: {worked}.",
         "rounded": "Each session rounded to the nearest 15 minutes.",
@@ -1819,18 +1831,19 @@ TEXT = {
         "over": "{diff} por encima del paquete.",
         "even": "Justo el paquete.",
         "worked": "Trabajado: {worked}.",
-        "fee": "Cuota: {net} + IVA {vat} % ({vat_amount}) = {gross}.",
-        "package_fee": "Cuota del paquete: {fee}.",
-        "extra_billed": "Horas extra: {hours} a {rate}/h = {net}.",
-        "extra_waived": "Horas extra: {hours} a {rate}/h = {net}, no facturadas.",
-        "total_vat": "Total: {net} + IVA {vat} % ({vat_amount}) = {gross}.",
-        "fee_mixed_vat": "Cuota: {net} + IVA ({vat_amount}) = {gross}.",
-        "billed": "Facturado a {rate}/h: {net} + IVA {vat} % ({vat_amount}) = {gross}.",
-        "line_package": "{span}, paquete: {net}.",
-        "line_hourly": "{span}, {hours} a {rate}/h: {net}.",
-        "line_none": "{span}, sin condiciones: {hours} no facturadas.",
-        "total": "Total: {net} + IVA ({vat_amount}) = {gross}.",
-        "value": "Valor a tarifa estándar ({rate}/h): {value}. Descuento por paquete: {discount} ({pct} %).",
+        "money_columns": ["Concepto", "Horas", "Tarifa", "A {rate}/h", "Descuento", "Facturado"],
+        "row_package": "Paquete",
+        "row_extra": "Horas extra",
+        "row_hours": "Horas trabajadas",
+        "row_span_package": "{span}, paquete",
+        "row_span_hourly": "{span}, por horas",
+        "row_span_none": "{span}, sin condiciones",
+        "waived": "no facturadas",
+        "not_billed": "no facturadas",
+        "subtotal": "Subtotal sin IVA",
+        "vat_row": "IVA {vat} %",
+        "vat_plain": "IVA",
+        "total_row": "Total",
         "week_total": "Total: {worked} de {guide}.",
         "week_total_plain": "Total: {worked}.",
         "rounded": "Cada sesión redondeada al cuarto de hora más cercano.",
@@ -2036,49 +2049,70 @@ def month_report(company, fig, rows, cfg, now):
                                              owed=fmt_duration(fig["targetSec"]), fee=eur(m["net"])))
     totals = []
     vats = {l["vatPercent"] for l in m["lines"] if l["billing"] != "none"}
+
+    def per_hour(v):
+        return eur(v) + "/h"
+
+    def off(value, discount):
+        """A discount against the standard rate: "-400,00 € (20,0 %)"; a
+        rate above the standard one shows as "+"."""
+        if not discount:
+            return ""
+        pct = math.floor(1000 * abs(discount) / value + 0.5) / 10 if value > 0 else 0.0
+        return "%s%s (%s %%)" % ("-" if discount > 0 else "+", eur(abs(discount)), fmt_number(pct, lang))
+
+    # Every row: concept, hours, rate, value at the standard rate, discount,
+    # billed. All before VAT; the VAT and the total are the last two rows.
+    body = []
+    show_discount = False
     if fig["billing"] == "package":
         totals.append(t["worked_owed"].format(worked=fmt_duration(total), owed=fmt_duration(fig["targetSec"])))
         diff = total - fig["targetSec"]
         totals[-1] += " " + (t["under"].format(diff=fmt_duration(-diff)) if diff < 0 else
                              t["over"].format(diff=fmt_duration(diff)) if diff > 0 else t["even"])
-        vat_label = fmt_rate(vats.pop(), lang) if len(vats) == 1 else None
+        show_discount = bool(cfg["reportShowDiscount"] and m["standardValue"])
+        body.append([t["row_package"], fmt_duration(fig["targetSec"]),
+                     per_hour(m["packageRate"]) if m["packageRate"] is not None else "",
+                     eur(m["packageValue"]), off(m["packageValue"], m["packageDiscount"]), eur(m["fee"])])
         if m["overSec"] > 0:
-            extra = {"hours": fmt_duration(m["overSec"]), "rate": eur(m["overageRate"]), "net": eur(m["overageNet"])}
-            totals.append(t["package_fee"].format(fee=eur(m["fee"])))
-            totals.append((t["extra_waived"] if m["overageWaived"] else t["extra_billed"]).format(**extra))
-            fee_key = "total_vat"
-        else:
-            fee_key = "fee"
-        if vat_label is not None:
-            totals.append(t[fee_key].format(net=eur(m["net"]), vat=vat_label, vat_amount=eur(m["vat"]), gross=eur(m["gross"])))
-        else:
-            totals.append(t["fee_mixed_vat"].format(net=eur(m["net"]), vat_amount=eur(m["vat"]), gross=eur(m["gross"])))
-        if cfg["reportShowDiscount"] and m["standardValue"]:
-            totals.append(t["value"].format(rate=eur(fig["standardRate"]), value=eur(m["standardValue"]),
-                                            discount=eur(m["discount"]), pct=fmt_number(m["discountPercent"], lang)))
+            waived = m["overageWaived"]
+            body.append([t["row_extra"], fmt_duration(m["overSec"]), t["waived"] if waived else per_hour(m["overageRate"]),
+                         eur(m["overageValue"]), off(m["overageValue"], m["overageDiscount"]),
+                         eur(0.0 if waived else m["overageNet"])])
+            body.append([t["subtotal"], fmt_duration(fig["targetSec"] + m["overSec"]), "", eur(m["standardValue"]),
+                         off(m["standardValue"], cents(m["standardValue"] - m["net"])), eur(m["net"])])
     elif fig["billing"] == "hourly" and len(fig["parts"]) == 1:
-        p = fig["parts"][0]
         totals.append(t["worked"].format(worked=fmt_duration(total)))
-        totals.append(t["billed"].format(rate=eur(p["standardRate"]), net=eur(m["net"]), vat=fmt_rate(p["vatPercent"], lang),
-                                         vat_amount=eur(m["vat"]), gross=eur(m["gross"])))
+        body.append([t["row_hours"], fmt_duration(total), per_hour(fig["parts"][0]["standardRate"]), "", "", eur(m["net"])])
     else:
         totals.append(t["worked"].format(worked=fmt_duration(total)))
-        for l in m["lines"]:
-            span = span_label(date.fromisoformat(l["from"]), date.fromisoformat(l["to"]), t)
-            if l["billing"] == "package":
-                totals.append(t["line_package"].format(span=span, net=eur(l["net"])))
-            elif l["billing"] == "hourly":
-                totals.append(t["line_hourly"].format(span=span, hours=fmt_duration(l["workedSec"]), rate=eur(l["standardRate"]), net=eur(l["net"])))
-            elif fig["billing"] != "none":
-                totals.append(t["line_none"].format(span=span, hours=fmt_duration(l["workedSec"])))
         if fig["billing"] != "none":
-            totals.append(t["total"].format(net=eur(m["net"]), vat_amount=eur(m["vat"]), gross=eur(m["gross"])))
+            for l in m["lines"]:
+                span = span_label(date.fromisoformat(l["from"]), date.fromisoformat(l["to"]), t)
+                if l["billing"] == "package":
+                    body.append([t["row_span_package"].format(span=span), "", "", "", "", eur(l["net"])])
+                elif l["billing"] == "hourly":
+                    body.append([t["row_span_hourly"].format(span=span), fmt_duration(l["workedSec"]), per_hour(l["standardRate"]), "", "", eur(l["net"])])
+                else:
+                    body.append([t["row_span_none"].format(span=span), fmt_duration(l["workedSec"]), t["not_billed"], "", "", eur(0.0)])
+            if len(body) > 1:
+                body.append([t["subtotal"], fmt_duration(total), "", "", "", eur(m["net"])])
+    table = None
+    if body:
+        vat_row = t["vat_row"].format(vat=fmt_rate(next(iter(vats)), lang)) if len(vats) == 1 else t["vat_plain"]
+        body.append([vat_row, "", "", "", "", eur(m["vat"])])
+        body.append([t["total_row"], "", "", "", "", eur(m["gross"])])
+        columns = [c.format(rate=eur(fig["standardRate"])) for c in t["money_columns"]]
+        if not show_discount:
+            columns = columns[:3] + columns[5:]
+            body = [r[:3] + r[5:] for r in body]
+        table = {"columns": columns, "rows": body}
     notes = []
     if cfg["reportRoundingMinutes"]:
         notes.append(t["rounded"])
     notes.append(t["footer"].format(n=len(rows), when=local(now).strftime("%Y-%m-%d %H:%M")))
     return {"title": title, "terms": terms_lines, "columns": t["columns"], "rows": table_rows(rows, t, False),
-            "totals": totals, "notes": notes, "empty": t["empty"], "lang": lang, "t": t}
+            "totals": totals, "money": table, "notes": notes, "empty": t["empty"], "lang": lang, "t": t}
 
 
 def week_report(company, monday, rows, cfg, now, with_company):
@@ -2100,7 +2134,7 @@ def week_report(company, monday, rows, cfg, now, with_company):
         notes.append(t["rounded"])
     notes.append(t["footer"].format(n=len(rows), when=local(now).strftime("%Y-%m-%d %H:%M")))
     return {"title": title, "terms": [], "columns": columns, "rows": table_rows(rows, t, with_company),
-            "totals": totals, "notes": notes, "empty": t["empty"], "lang": lang, "t": t}
+            "totals": totals, "money": None, "notes": notes, "empty": t["empty"], "lang": lang, "t": t}
 
 
 def md_escape(text):
@@ -2123,6 +2157,13 @@ def render_markdown(rep):
         lines.append(e(rep["empty"]))
     lines.append("")
     lines += [e(x) for x in rep["totals"]] + [""]
+    money_table = rep["money"]
+    if money_table:
+        lines.append("| " + " | ".join(e(c) for c in money_table["columns"]) + " |")
+        lines.append("|---|" + "---:|" * (len(money_table["columns"]) - 1))
+        for cells in money_table["rows"]:
+            lines.append("| " + " | ".join(e(c) for c in cells) + " |")
+        lines.append("")
     lines += [e(x) for x in rep["notes"]]
     return "\n".join(lines) + "\n"
 
@@ -2145,6 +2186,8 @@ td {{ padding: 6px 8px; vertical-align: top; border-bottom: 1px solid #ececf0; }
 tbody tr:nth-child(even) td {{ background: #f7f7f9; }}
 td.num, th.num {{ text-align: right; white-space: nowrap; }}
 td.nowrap {{ white-space: nowrap; }}
+table.money {{ margin-top: 12px; }}
+table.money tr.total td {{ font-weight: 600; }}
 footer {{ margin-top: 28px; color: #6e6e73; font-size: 13px; }}
 @media print {{ main {{ padding: 0; }} }}
 </style>
@@ -2182,9 +2225,18 @@ def render_html(rep):
         table = "<table>\n<thead><tr>%s</tr></thead>\n<tbody>\n%s\n</tbody>\n</table>" % (head, "\n".join(body))
     else:
         table = "<p>%s</p>" % e(rep["empty"])
+    totals = "\n".join("<p>%s</p>" % e(x) for x in rep["totals"])
+    money_table = rep["money"]
+    if money_table:
+        head = "".join('<th class="num">%s</th>' % e(c) if i else "<th>%s</th>" % e(c) for i, c in enumerate(money_table["columns"]))
+        body = []
+        for n, cells in enumerate(money_table["rows"]):
+            tds = "".join('<td class="num">%s</td>' % e(c) if i else "<td>%s</td>" % e(c) for i, c in enumerate(cells))
+            body.append("<tr%s>%s</tr>" % (' class="total"' if n == len(money_table["rows"]) - 1 else "", tds))
+        totals += '\n<table class="money">\n<thead><tr>%s</tr></thead>\n<tbody>\n%s\n</tbody>\n</table>' % (head, "\n".join(body))
     return HTML_PAGE.format(lang=rep["lang"], title=e(rep["title"]), terms=terms, table=table,
                             totals_heading=e(t["totals_heading"]),
-                            totals="\n".join("<p>%s</p>" % e(x) for x in rep["totals"]),
+                            totals=totals,
                             notes="<br>".join(e(x) for x in rep["notes"]))
 
 

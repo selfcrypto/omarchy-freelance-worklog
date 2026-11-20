@@ -388,9 +388,10 @@ class Helper(unittest.TestCase):
             md = f.read()
         self.assertIn("octubre de 2026", md)
         self.assertIn("| mar 27 oct | 09:00 a 11:08 | 2h 15m |  | Hecho |", md)
-        self.assertIn("1.600,00 € + IVA 21 % (336,00 €) = 1.936,00 €", md)
-        self.assertIn("2.000,00 €", md)
-        self.assertIn("400,00 € (20,0 %)", md)
+        self.assertIn("| Concepto | Horas | Tarifa | A 50,00 €/h | Descuento | Facturado |", md)
+        self.assertIn("| Paquete | 40h | 40,00 €/h | 2.000,00 € | -400,00 € (20,0 %) | 1.600,00 € |", md)
+        self.assertIn("| IVA 21 % |  |  |  |  | 336,00 € |", md)
+        self.assertIn("| Total |  |  |  |  | 1.936,00 € |", md)
         self.assertIn("redondeada", md)
 
     # ------------------------------------------------------------ review 2026-10-27 (Codex)
