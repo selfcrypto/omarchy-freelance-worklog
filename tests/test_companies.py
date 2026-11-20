@@ -447,6 +447,56 @@ class Companies(unittest.TestCase):
         self.assertEqual(self.figures("2026-10", "c_0001")["money"]["net"], 590)
         self.assertEqual(self.run_cmd("overage", "--action", "waive", "--id", "c_0001", "--month", "x", ok=False)["field"], "month")
 
+    def test_extra_hour_rate_of_one_cycle(self):
+        # Standard and extra hours at 60 in the terms; October alone bills the extra hours at 50.
+        self.terms("c_0001", "2026-10-01", replace="2026-10-01", monthlyHours=10, monthlyFee=500, standardRate=60)
+        self.add([seg("2026-10-05T07:00:00Z", "2026-10-05T19:00:00Z")])  # 12 h, 2 over
+        now = "2026-11-25T10:00:00Z"
+        self.add([seg("2026-11-05T07:00:00Z", "2026-11-05T19:00:00Z")], now=now)
+        self.run_cmd("overage", "--action", "rate", "--id", "c_0001", "--month", "2026-10", "--rate", "50")
+        self.assertEqual(self.log()["companies"][0]["overageRates"], {"2026-10": 50})
+        f = self.figures("2026-10", "c_0001")
+        self.assertEqual((f["overageRate"], f["overageRateTerms"], f["overageRateSet"]), (50, 60, True))
+        m = f["money"]
+        self.assertEqual((m["overageNet"], m["overageValue"], m["overageDiscount"]), (100, 120, 20))
+        self.assertEqual((m["packageValue"], m["packageDiscount"], m["net"], m["gross"]), (600, 100, 600, 726))
+        # The other cycles keep the terms' rate.
+        n = self.figures("2026-11", "c_0001", now)
+        self.assertEqual((n["overageRate"], n["overageRateSet"], n["money"]["overageNet"]), (60, False, 120))
+        r = self.run_cmd("export", "--month", "2026-10", "--out", self.out)["export"]
+        with open(r["markdown"]) as fh:
+            md = fh.read()
+        self.assertIn("| Package | 10h | 50,00 €/h | 600,00 € | -100,00 € (16,7 %) | 500,00 € |", md)
+        self.assertIn("| Extra hours | 2h | 50,00 €/h | 120,00 € | -20,00 € (16,7 %) | 100,00 € |", md)
+        self.assertIn("| Subtotal before VAT | 12h |  | 720,00 € | -120,00 € (16,7 %) | 600,00 € |", md)
+        self.assertIn("| Total |  |  |  |  | 726,00 € |", md)
+        # Waiving still wins; the rate stays for when they are billed again.
+        self.run_cmd("overage", "--action", "waive", "--id", "c_0001", "--month", "2026-10")
+        self.assertEqual(self.figures("2026-10", "c_0001")["money"]["net"], 500)
+        self.run_cmd("overage", "--action", "bill", "--id", "c_0001", "--month", "2026-10")
+        self.assertEqual(self.figures("2026-10", "c_0001")["money"]["net"], 600)
+        for bad in ("-1", "x", "10001"):
+            self.assertEqual(self.run_cmd("overage", "--action", "rate", "--id", "c_0001", "--month", "2026-10", "--rate", bad, ok=False)["field"], "rate")
+        # Without a rate the cycle goes back to the terms.
+        self.run_cmd("overage", "--action", "rate", "--id", "c_0001", "--month", "2026-10")
+        self.assertNotIn("overageRates", self.log()["companies"][0])
+        self.assertEqual(self.figures("2026-10", "c_0001")["money"]["net"], 620)
+
+    def test_stored_cycle_rates_are_checked(self):
+        self.add([seg("2026-10-05T07:00:00Z", "2026-10-05T08:00:00Z")])
+        path = os.path.join(self.dir, "worklog.json")
+        for bad in ({"2026-13x": 50}, {"2026-10": -1}, {"2026-10": "50"}, {"2026-10": True}, [50]):
+            log = self.log()
+            log["companies"][0]["overageRates"] = bad
+            with open(path, "w") as f:
+                json.dump(log, f)
+            r = self.run_cmd("view", ok=False)
+            self.assertEqual(r["field"], "data", bad)
+            self.assertIn("overageRates", r["error"])
+            del log["companies"][0]["overageRates"]
+            with open(path, "w") as f:
+                json.dump(log, f)
+
     def test_extra_hour_rate_defaults_to_the_standard_rate(self):
         self.terms("c_0001", "2026-11-01", standardRate=70)
         c = self.log()["companies"][0]

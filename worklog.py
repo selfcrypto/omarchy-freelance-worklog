@@ -50,6 +50,7 @@ MAX_SUMMARY = 2000
 # Companies and contract periods are listed whole in every view.
 MAX_COMPANIES = 100
 MAX_PERIODS = 100
+MAX_CYCLE_RATES = 600   # cycles of one company with their own extra hour rate
 MAX_TAG = 32
 MAX_TAGS = 10
 TREND_WEEKS = 8
@@ -382,6 +383,17 @@ def company_problem(c):
     waived = c.get("waived", [])
     if not isinstance(waived, list) or not all(isinstance(k, str) and re.fullmatch(r"\d{4}-\d{2}", k) for k in waived):
         return "waived is not a list of months"
+    rates = c.get("overageRates", {})
+    if not isinstance(rates, dict) or len(rates) > MAX_CYCLE_RATES:
+        return "overageRates is not a short map of months"
+    for k, v in rates.items():
+        if not re.fullmatch(r"\d{4}-\d{2}", k):
+            return "overageRates is not a short map of months"
+        try:
+            if number(v, "overageRate", *TERM_RANGES["overageRate"]) != v:
+                return "overageRates: a rate with more than two decimals"
+        except Refusal as e:
+            return "overageRates: " + e.error
     contracts = c.get("contracts")
     if not isinstance(contracts, list) or not contracts:
         return "no contracts"
@@ -1040,6 +1052,9 @@ def cycle_figures(company, key, segments, today, now):
     guide_day = min(max(today, first), last)
     t = terms_on(company, guide_day) or next((terms_on(company, date.fromisoformat(p["from"])) for p in parts if p["billing"] != "none"), None)
     rate_days = sum(p["days"] for p in parts if p["billing"] == "package")
+    terms_rate = cents(sum(p["overageRate"] * p["days"] for p in parts if p["billing"] == "package") / rate_days) if rate_days else 0
+    # A rate set for this cycle alone replaces the terms' extra hour rate.
+    cycle_rate = company.get("overageRates", {}).get(key)
     return {
         "key": key,
         "company": company["id"],
@@ -1059,7 +1074,9 @@ def cycle_figures(company, key, segments, today, now):
         "currency": t["currency"] if t else DEFAULT_TERMS["currency"],
         "guideSec": t["weeklyGuideHours"] * 3600 if t else 0,
         "standardRate": cents(sum(p["standardRate"] * p["days"] for p in parts if p["billing"] == "package") / rate_days) if rate_days else 0,
-        "overageRate": cents(sum(p["overageRate"] * p["days"] for p in parts if p["billing"] == "package") / rate_days) if rate_days else 0,
+        "overageRate": terms_rate if cycle_rate is None or not rate_days else cycle_rate,
+        "overageRateTerms": terms_rate,
+        "overageRateSet": cycle_rate is not None and bool(rate_days),
         "overageVat": next((p["vatPercent"] for p in reversed(parts) if p["billing"] == "package"), 0),
         "waived": key in company.get("waived", []),
         "livePart": live_part,
@@ -1595,11 +1612,28 @@ def check_currency_cuts(company):
 
 
 def cmd_overage(store, args, now):
-    """Waive (or bill again) the hours over the package in one cycle."""
+    """The hours over the package in one cycle: waive them, bill them again,
+    or bill them at a rate of this cycle alone (`rate`; without --rate the
+    cycle goes back to the terms' extra hour rate)."""
     company = company_by_id(store, args.id)
     key = args.month
     parse_month_key(key or "")
     waived = [k for k in company.get("waived", []) if k != key]
+    if args.action == "rate":
+        rates = dict(company.get("overageRates", {}))
+        if args.rate in (None, ""):
+            rates.pop(key, None)
+        else:
+            rate = number(args.rate, "rate", *TERM_RANGES["overageRate"])
+            if key not in rates and len(rates) >= MAX_CYCLE_RATES:
+                raise Refusal("at most %d cycles with their own rate" % MAX_CYCLE_RATES, "rate")
+            rates[key] = rate
+        if rates:
+            company["overageRates"] = dict(sorted(rates.items()))
+        else:
+            company.pop("overageRates", None)
+        company["updatedAt"] = iso(now)
+        return
     if args.action == "waive":
         waived.append(key)
     elif args.action != "bill":
@@ -2339,6 +2373,7 @@ def parser():
     p.add_argument("--from", dest="from_")
     p.add_argument("--terms")
     p.add_argument("--replace")
+    p.add_argument("--rate")
     return p
 
 

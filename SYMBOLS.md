@@ -546,7 +546,7 @@ Render check for the session form and the chart (run.sh): each case at a
 ## tests/render/run.sh (30 lines)
 Render check of the session form and the chart under Quickshell:
 
-## tests/test_companies.py (633 lines)
+## tests/test_companies.py (683 lines)
 Companies, contract periods and billing cycles (v2):
 - const FIXTURE_TERMS L12
 - const HELPER L15
@@ -554,7 +554,7 @@ Companies, contract periods and billing cycles (v2):
 - def load_module() L19
 - const W L27
 - def seg(start, end) L30
-- class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies, test_half_cent_vat_rounds_up, test_report_keeps_a_fractional_vat_rate, test_resume_cannot_overlap_a_confirmed_session_or_start_later, test_month_lists_a_session_on_every_day_it_has_work]
+- class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_of_one_cycle, test_stored_cycle_rates_are_checked, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies, test_half_cent_vat_rounds_up, test_report_keeps_a_fractional_vat_rate, test_resume_cannot_overlap_a_confirmed_session_or_start_later, test_month_lists_a_session_on_every_day_it_has_work]
 
 ## tests/test_worklog.py (828 lines)
 Data layer tests: python3 -m unittest discover -s tests
@@ -562,154 +562,155 @@ Data layer tests: python3 -m unittest discover -s tests
 - const HELPER L15
 - class Helper L18 [setUp, tearDown, run_cmd, log, has_active, active, test_full_cycle, test_commands_in_wrong_state_are_no_ops, test_start_while_paused_resumes, test_idle_pause_back_dated_and_clamped, test_unpause_counts_the_gap_as_work, test_back_from_review, test_confirm_without_args_uses_the_draft, test_discard, test_draft_survives, test_start_with_earlier_segments, test_start_with_closed_last_segment_refused, test_recover_same_boot_fresh_heartbeat, test_recover_stale_heartbeat, test_recover_other_boot, test_recover_keeps_review, test_midnight_split, test_dst_weekend_counts_real_seconds, test_week_figures, test_trend_has_eight_weeks_oldest_first, test_month_and_money, test_money_over_the_package, test_legacy_settings_seed_the_first_company, test_validation, test_overlap_with_other_session_and_running, test_short_segments_dropped_at_confirm, test_empty_session_cannot_be_confirmed, test_confirm_with_edited_segments, test_update_delete_and_sorting, test_sessions_by_week_and_month, test_backup_once_per_day, test_corrupt_log_moved_aside, test_concurrent_writers, test_export_week, test_export_month_spanish_rounded_with_discount, test_confirm_retried_after_a_cut_does_not_duplicate, test_recover_drops_an_already_confirmed_active, test_export_clips_sessions_to_the_period, test_unpause_after_restart_keeps_the_counted_time, test_resume_refreshes_the_heartbeat, test_unpause_refuses_an_overlap, test_malformed_session_answers_in_json_and_keeps_the_file, test_group_writable_data_dir_is_tightened, test_csv_cells_never_start_a_formula, test_interrupted_backup_leaves_no_daily_backup, helper, test_stdin_arguments_stay_off_the_command_line, test_bad_stdin_arguments_are_refused, test_command_line_arguments_still_work, test_refusals_never_echo_a_tag, base, files, test_edit_active_moves_a_running_start_earlier, test_edit_active_keeps_a_paused_session_paused, stale_save, test_stale_form_cannot_undo_a_pause, test_stale_form_cannot_erase_later_work, test_stale_form_cannot_land_on_a_new_session, test_stale_form_refused_after_a_draft_or_company_change, test_a_heartbeat_does_not_make_a_form_stale, test_edit_active_writes_the_draft_with_the_times, test_edit_active_refused_saves_nothing, test_edit_active_keeps_the_shape_of_the_state, test_edit_active_keeps_short_and_empty_segments, test_edit_active_time_ahead_of_now_is_stored_as_now, test_confirm_drops_an_empty_segment, test_a_session_of_empty_segments_stays_refused_at_confirm, test_a_ledger_over_the_bound_is_refused_and_left_alone, test_old_sessions_leave_the_view_figures_alone, test_a_fifo_at_the_ledger_path_is_refused_without_hanging, test_a_dangling_link_at_a_report_name_is_skipped, test_the_answer_is_ascii_whatever_the_text, test_a_save_past_the_bound_is_refused_and_the_session_still_stops, test_a_fifo_at_the_lock_path_is_refused_without_hanging, test_old_sessions_leave_the_month_page_alone]
 
-## worklog.py (2418 lines)
+## worklog.py (2453 lines)
 Worklog data helper: the only writer of the worklog files.
 - const VERSION L47
 - const MIN_SEGMENT_SEC L48
 - const MAX_SUMMARY L49
 - const MAX_COMPANIES L51
 - const MAX_PERIODS L52
-- const MAX_TAG L53
-- const MAX_TAGS L54
-- const TREND_WEEKS L55
-- const MAX_LEDGER_MB L61
-- const RECENT L62
-- const BACKUPS_KEPT L63
-- const END_REASONS L64
-- const PAUSE_REASONS L65
-- const BILLING L66
-- const DEFAULT_COMPANY_ID L69
-- const DEFAULT_COMPANY_NAME L70
-- const DEFAULT_TERMS L72
-- const TERM_RANGES L84
-- const LEGACY_KEYS L94
-- const DEFAULT_CONFIG L103
-- class Refusal L111 [__init__]
-- def now_utc() L120
-- def local_zone() L127
-- const TZ L138
-- def parse_iso(value, field) L141
-- def iso(dt) L153
-- def local(dt) L157
-- def day_start(d) L161: UTC instant of local midnight starting date d.
-- def week_monday(d) L166
-- def week_key(d) L170
-- def monday_of_key(key) L175
-- def parse_month_key(key) L183
-- def month_bounds(key) L192
-- def shift_month(y, m, n) L197
-- def parse_day(value, field) L202
-- def cents(x) L212: Money rounded to the cent half up, as Model.js round2 does, so the
-- def session_days(sess) L220: The local days a confirmed session has work on, in order.
-- def overlap_sec(a_start, a_end, b_start, b_end) L234
-- def cycle_first(cycle_day, y, m) L240
-- def cycle_bounds(cycle_day, key) L244: First and last local day of the cycle named by the month it starts in.
-- def cycle_of(cycle_day, d) L252: Key of the cycle holding local date d.
-- def shift_cycle(key, n) L260
-- def number(value, field, low, high) L267
-- def clean_terms(raw) L279: Contract terms from the panel or the file, validated. Raises Refusal
-- def clean_name(value) L316
-- def clean_tag(value, name) L323
-- def clean_cycle_day(value) L332
-- def stored_terms_problem(k) L342: Stored terms must be what clean_terms would write: every key, real
-- def company_problem(c) L362: Why a stored company cannot be used, or "" when it can.
-- def session_problem(s, allow_open) L406: Why a stored session cannot be used, or "" when it can.
-- def config_from(raw) L435: UI preferences from the service. The six v1 terms keys, at the top
-- def terms_from_legacy(legacy) L467
-- def new_company(cid, name, tag, cycle_day, start, terms, now) L479
-- def data_dir() L489
-- class Store L507 [__init__, close, _read_json, _set_aside, _fresh_log, _migrate, _load_log, _load_active, _write, _copy, _backup, save_log, save_active]
-- def company_by_id(store, cid) L724
-- def resolve_company(store, ref, allow_archived) L731: A company named by id, name or tag (case-insensitive). Archived
-- def current_company(store) L748
-- def fallback_company(log, leaving) L752: The company to make current when `leaving` cannot stay current: the
-- def terms_on(company, d) L765: Terms in force on local date d, or None before the first period.
-- def guide_on(company, d) L775
-- def cycle_parts(company, first, last) L780: The cycle cut where the terms change: [(from, to, terms or None)].
-- def cycle_label(cycle_day, first, last, lang) L794
-- def session_counts(store) L809
-- def company_row(store, c, today, counts) L816
-- def companies_sorted(store) L826
-- def seg_bounds(seg, now) L832
-- def worked_sec(segments, now, closed_only) L838
-- def paused_sec(segments, now) L848
-- def clean_segments(raw, now, allow_open, drop_short) L856: Validate a segment list from the editor. Returns a new sorted list.
-- def clean_summary(text) L901
-- def clean_tags(raw) L910
-- def check_no_overlap(store, segments, now, skip_id, include_active) L929
-- def new_id(now) L944
-- def ledger_limit_bytes() L950
-- def all_segments(store, include_active, now, company, since) L958: Closed segments of the confirmed sessions and, when asked, of the live
-- def sec_between(segments, start, end, now) L976
-- def week_figures(segments, monday, today, target_sec, now) L984
-- def days_elapsed(first, last, today) L1002
-- def cycle_figures(company, key, segments, today, now) L1010: One company's cycle: owed hours, pace and the parts its terms cut it
-- def money(fig, worked_sec_value, part_worked) L1070: What the cycle bills for `worked_sec_value` seconds. The seconds the
-- def session_row(s, now) L1139
-- def recent_tags(store) L1158
-- def build_view(store, now) L1169
-- def edit_base(active) L1238: Fingerprint of what the session form shows. A save carrying an older one
-- def need_state(store) L1247
-- def close_open(store, at, reason) L1254
-- def cmd_start(store, args, now) L1263
-- def cmd_pause(store, args, now) L1296
-- def cmd_resume(store, args, now) L1306
-- def cmd_unpause(store, args, now) L1324: Count the pause as work: the last segment runs on as if never closed.
-- def cmd_stop(store, args, now) L1338
-- def cmd_back(store, args, now) L1348
-- def set_draft(active, summary, tags) L1357
-- def cmd_draft(store, args, now) L1365
-- def cmd_edit_active(store, args, now) L1370
-- def session_company(store, args, default) L1400: --company for a confirmed session: any active company, or the one the
-- def cmd_confirm(store, args, now) L1411
-- def cmd_discard(store, args, now) L1438
-- def cmd_heartbeat(store, args, now) L1443
-- def cmd_recover(store, args, now) L1450: Service start: a running session whose heartbeat is stale, or from
-- def cmd_announce(store, args, now) L1473
-- def find_session(store, sid) L1478
-- def cmd_add(store, args, now) L1485
-- def cmd_update(store, args, now) L1503
-- def cmd_delete(store, args, now) L1513
-- def check_name_free(store, name, skip_id) L1520
-- def cmd_company(store, args, now) L1526
-- def check_currency_cuts(company) L1587: A cycle bills in one currency: a period that changes the currency must
-- def cmd_overage(store, args, now) L1597: Waive (or bill again) the hours over the package in one cycle.
-- def cmd_contract(store, args, now) L1611
-- def sessions_in(store, first, last, now, company) L1643
-- def cmd_sessions(store, args, now, cfg) L1656
-- def month_key_arg(value, company, today) L1667
-- def cmd_month(store, args, now) L1674: The month page: one company's cycle, or a calendar month for all.
-- const TEXT L1760
-- def fmt_duration(sec) L1858
-- def fmt_money(value, lang, currency) L1869: 1.600,00 €: Spanish separators in both report languages, as the
-- def fmt_number(value, lang, digits) L1876
-- def fmt_rate(value, lang) L1880: A VAT rate as given: 21, 7,5, 10,25 (no rounding to whole points).
-- def ordinal(n) L1885
-- def day_label(d, t) L1893
-- def short_day(d, t, year) L1897
-- def span_label(a, b, t) L1902
-- def rounded(sec, rounding_min) L1910
-- def slug(name) L1917
-- def export_rows(sessions, now, rounding_min, period_start, period_end, names) L1921: One row per session, its segments clipped to the period, so a session
-- def row_parts(row, parts, now) L1950: A row's (rounded) seconds split over the terms parts by where its
-- def csv_text(value) L1963: A cell a spreadsheet shows as text, never runs as a formula.
-- def write_csv(path, rows) L1969
-- def summary_lines(text) L1980: The summary's lines as written, trimmed, blank lines dropped, joined by
-- def terms_text(terms, t, lang) L1986
-- def cycle_text(cycle_day, t) L1995
-- def table_rows(rows, t, with_company) L2001
-- def month_report(company, fig, rows, cfg, now) L2013: The monthly report of one company as plain parts: title, terms lines,
-- def week_report(company, monday, rows, cfg, now, with_company) L2118
-- def md_escape(text) L2140: Plain text in Markdown: no markup, links, images or raw HTML from the
-- def render_markdown(rep) L2146
-- const HTML_PAGE L2171
-- def render_html(rep) L2209
-- def write_report(out_dir, stem, rep, rows, cfg) L2243: The CSV, Markdown and HTML of one report under one free name: a
-- def cmd_export(store, args, now, cfg) L2266
-- const MUTATING L2308
-- const LOG_WRITERS L2315
-- def parser() L2318
-- def run(argv) L2345
-- const MAX_STDIN L2377
-- def stdin_argv() L2380: `worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
-- def main(argv) L2396
+- const MAX_CYCLE_RATES L53
+- const MAX_TAG L54
+- const MAX_TAGS L55
+- const TREND_WEEKS L56
+- const MAX_LEDGER_MB L62
+- const RECENT L63
+- const BACKUPS_KEPT L64
+- const END_REASONS L65
+- const PAUSE_REASONS L66
+- const BILLING L67
+- const DEFAULT_COMPANY_ID L70
+- const DEFAULT_COMPANY_NAME L71
+- const DEFAULT_TERMS L73
+- const TERM_RANGES L85
+- const LEGACY_KEYS L95
+- const DEFAULT_CONFIG L104
+- class Refusal L112 [__init__]
+- def now_utc() L121
+- def local_zone() L128
+- const TZ L139
+- def parse_iso(value, field) L142
+- def iso(dt) L154
+- def local(dt) L158
+- def day_start(d) L162: UTC instant of local midnight starting date d.
+- def week_monday(d) L167
+- def week_key(d) L171
+- def monday_of_key(key) L176
+- def parse_month_key(key) L184
+- def month_bounds(key) L193
+- def shift_month(y, m, n) L198
+- def parse_day(value, field) L203
+- def cents(x) L213: Money rounded to the cent half up, as Model.js round2 does, so the
+- def session_days(sess) L221: The local days a confirmed session has work on, in order.
+- def overlap_sec(a_start, a_end, b_start, b_end) L235
+- def cycle_first(cycle_day, y, m) L241
+- def cycle_bounds(cycle_day, key) L245: First and last local day of the cycle named by the month it starts in.
+- def cycle_of(cycle_day, d) L253: Key of the cycle holding local date d.
+- def shift_cycle(key, n) L261
+- def number(value, field, low, high) L268
+- def clean_terms(raw) L280: Contract terms from the panel or the file, validated. Raises Refusal
+- def clean_name(value) L317
+- def clean_tag(value, name) L324
+- def clean_cycle_day(value) L333
+- def stored_terms_problem(k) L343: Stored terms must be what clean_terms would write: every key, real
+- def company_problem(c) L363: Why a stored company cannot be used, or "" when it can.
+- def session_problem(s, allow_open) L418: Why a stored session cannot be used, or "" when it can.
+- def config_from(raw) L447: UI preferences from the service. The six v1 terms keys, at the top
+- def terms_from_legacy(legacy) L479
+- def new_company(cid, name, tag, cycle_day, start, terms, now) L491
+- def data_dir() L501
+- class Store L519 [__init__, close, _read_json, _set_aside, _fresh_log, _migrate, _load_log, _load_active, _write, _copy, _backup, save_log, save_active]
+- def company_by_id(store, cid) L736
+- def resolve_company(store, ref, allow_archived) L743: A company named by id, name or tag (case-insensitive). Archived
+- def current_company(store) L760
+- def fallback_company(log, leaving) L764: The company to make current when `leaving` cannot stay current: the
+- def terms_on(company, d) L777: Terms in force on local date d, or None before the first period.
+- def guide_on(company, d) L787
+- def cycle_parts(company, first, last) L792: The cycle cut where the terms change: [(from, to, terms or None)].
+- def cycle_label(cycle_day, first, last, lang) L806
+- def session_counts(store) L821
+- def company_row(store, c, today, counts) L828
+- def companies_sorted(store) L838
+- def seg_bounds(seg, now) L844
+- def worked_sec(segments, now, closed_only) L850
+- def paused_sec(segments, now) L860
+- def clean_segments(raw, now, allow_open, drop_short) L868: Validate a segment list from the editor. Returns a new sorted list.
+- def clean_summary(text) L913
+- def clean_tags(raw) L922
+- def check_no_overlap(store, segments, now, skip_id, include_active) L941
+- def new_id(now) L956
+- def ledger_limit_bytes() L962
+- def all_segments(store, include_active, now, company, since) L970: Closed segments of the confirmed sessions and, when asked, of the live
+- def sec_between(segments, start, end, now) L988
+- def week_figures(segments, monday, today, target_sec, now) L996
+- def days_elapsed(first, last, today) L1014
+- def cycle_figures(company, key, segments, today, now) L1022: One company's cycle: owed hours, pace and the parts its terms cut it
+- def money(fig, worked_sec_value, part_worked) L1087: What the cycle bills for `worked_sec_value` seconds. The seconds the
+- def session_row(s, now) L1156
+- def recent_tags(store) L1175
+- def build_view(store, now) L1186
+- def edit_base(active) L1255: Fingerprint of what the session form shows. A save carrying an older one
+- def need_state(store) L1264
+- def close_open(store, at, reason) L1271
+- def cmd_start(store, args, now) L1280
+- def cmd_pause(store, args, now) L1313
+- def cmd_resume(store, args, now) L1323
+- def cmd_unpause(store, args, now) L1341: Count the pause as work: the last segment runs on as if never closed.
+- def cmd_stop(store, args, now) L1355
+- def cmd_back(store, args, now) L1365
+- def set_draft(active, summary, tags) L1374
+- def cmd_draft(store, args, now) L1382
+- def cmd_edit_active(store, args, now) L1387
+- def session_company(store, args, default) L1417: --company for a confirmed session: any active company, or the one the
+- def cmd_confirm(store, args, now) L1428
+- def cmd_discard(store, args, now) L1455
+- def cmd_heartbeat(store, args, now) L1460
+- def cmd_recover(store, args, now) L1467: Service start: a running session whose heartbeat is stale, or from
+- def cmd_announce(store, args, now) L1490
+- def find_session(store, sid) L1495
+- def cmd_add(store, args, now) L1502
+- def cmd_update(store, args, now) L1520
+- def cmd_delete(store, args, now) L1530
+- def check_name_free(store, name, skip_id) L1537
+- def cmd_company(store, args, now) L1543
+- def check_currency_cuts(company) L1604: A cycle bills in one currency: a period that changes the currency must
+- def cmd_overage(store, args, now) L1614: The hours over the package in one cycle: waive them, bill them again,
+- def cmd_contract(store, args, now) L1645
+- def sessions_in(store, first, last, now, company) L1677
+- def cmd_sessions(store, args, now, cfg) L1690
+- def month_key_arg(value, company, today) L1701
+- def cmd_month(store, args, now) L1708: The month page: one company's cycle, or a calendar month for all.
+- const TEXT L1794
+- def fmt_duration(sec) L1892
+- def fmt_money(value, lang, currency) L1903: 1.600,00 €: Spanish separators in both report languages, as the
+- def fmt_number(value, lang, digits) L1910
+- def fmt_rate(value, lang) L1914: A VAT rate as given: 21, 7,5, 10,25 (no rounding to whole points).
+- def ordinal(n) L1919
+- def day_label(d, t) L1927
+- def short_day(d, t, year) L1931
+- def span_label(a, b, t) L1936
+- def rounded(sec, rounding_min) L1944
+- def slug(name) L1951
+- def export_rows(sessions, now, rounding_min, period_start, period_end, names) L1955: One row per session, its segments clipped to the period, so a session
+- def row_parts(row, parts, now) L1984: A row's (rounded) seconds split over the terms parts by where its
+- def csv_text(value) L1997: A cell a spreadsheet shows as text, never runs as a formula.
+- def write_csv(path, rows) L2003
+- def summary_lines(text) L2014: The summary's lines as written, trimmed, blank lines dropped, joined by
+- def terms_text(terms, t, lang) L2020
+- def cycle_text(cycle_day, t) L2029
+- def table_rows(rows, t, with_company) L2035
+- def month_report(company, fig, rows, cfg, now) L2047: The monthly report of one company as plain parts: title, terms lines,
+- def week_report(company, monday, rows, cfg, now, with_company) L2152
+- def md_escape(text) L2174: Plain text in Markdown: no markup, links, images or raw HTML from the
+- def render_markdown(rep) L2180
+- const HTML_PAGE L2205
+- def render_html(rep) L2243
+- def write_report(out_dir, stem, rep, rows, cfg) L2277: The CSV, Markdown and HTML of one report under one free name: a
+- def cmd_export(store, args, now, cfg) L2300
+- const MUTATING L2342
+- const LOG_WRITERS L2349
+- def parser() L2352
+- def run(argv) L2380
+- const MAX_STDIN L2412
+- def stdin_argv() L2415: `worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
+- def main(argv) L2431
