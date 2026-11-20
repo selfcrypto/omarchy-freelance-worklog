@@ -413,6 +413,38 @@ function moneySummary(live) {
   return { label: "To invoice", amount: fmtMoney(m.net, cur) + " + VAT" }
 }
 
+// The money card's discount lines, each against the standard rate. The
+// package: "Discount 400 € (20 %) on the 40h owed" while under it,
+// "Package discount 400 € (20 %) · 20h over the package" once past it.
+function discountLine(m, targetSec, cur) {
+  if (!m || m.discount === null) return ""
+  var over = m.overSec > 0 ? fmtDuration(m.overSec) + " over the package" : ""
+  if (m.overSec <= 0) {
+    if (m.discount <= 0) return ""
+    return "Discount " + fmtMoney(m.discount, cur) + " (" + fmtPercent(m.discountPercent) + ")"
+      + (m.projected ? " on the " + fmtDuration(targetSec) + " owed" : "")
+  }
+  if (m.packageDiscount <= 0) return over
+  return "Package discount " + fmtMoney(m.packageDiscount, cur) + " (" + fmtPercent(100 * m.packageDiscount / m.packageValue) + ") · " + over
+}
+
+// The extra hours billed under the standard rate: "Extra hours discount
+// 200 € (20 %) against 50 €/h"; nothing when waived or at that rate.
+function extraDiscountLine(m, standardRate, cur) {
+  if (!m || m.overSec <= 0 || m.overageWaived || !(m.overageDiscount > 0) || !(m.overageValue > 0)) return ""
+  return "Extra hours discount " + fmtMoney(m.overageDiscount, cur) + " (" + fmtPercent(100 * m.overageDiscount / m.overageValue) + ") against "
+    + fmtMoney(standardRate, cur) + "/h"
+}
+
+// The rate typed for one cycle's extra hours (worklog.py cmd_overage):
+// { error, value }.
+function checkCycleRate(text) {
+  var v = Number(text)
+  var r = TERM_RANGES.overageRate
+  if (String(text).trim() === "" || !isFinite(v) || v < r[0] || v > r[1]) return { error: "from " + r[0] + " to " + r[1], value: null }
+  return { error: "", value: Math.round(v * 100) / 100 }
+}
+
 // ------------------------------------------------------------- cycles
 
 function daysInMonth(y, m) { return new Date(y, m, 0).getDate() }  // m: 1..12
@@ -808,6 +840,9 @@ if (typeof module !== "undefined") {
     fmtHours: fmtHours,
     fmtMoney: fmtMoney,
     fmtPercent: fmtPercent,
+    discountLine: discountLine,
+    extraDiscountLine: extraDiscountLine,
+    checkCycleRate: checkCycleRate,
     localHM: localHM,
     localDateKey: localDateKey,
     dayLabel: dayLabel,

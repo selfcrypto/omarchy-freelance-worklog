@@ -871,8 +871,41 @@ Panel {
     readonly property string cur: fig ? fig.currency : "€"
     readonly property var m: live ? live.money : null
     readonly property var packageParts: fig ? fig.parts.filter(function(p) { return p.billing === "package" }) : []
+    // The cycle whose extra hour rate is being typed ("" when none): the
+    // form closes by itself when the page moves to another cycle.
+    property string rateFor: ""
+    property string rateError: ""
+    readonly property string cycleId: fig ? fig.company + "/" + fig.key : ""
+    readonly property bool rateEditing: rateFor !== "" && rateFor === cycleId && m !== null && m.overSec > 0 && !m.overageWaived
     width: parent ? parent.width : 0
     spacing: Style.space(2)
+
+    function editRate() {
+      rateError = ""
+      rateField.text = String(m.overageRate)
+      rateFor = cycleId
+      Qt.callLater(function() { rateField.forceActiveFocus(); rateField.selectAll() })
+    }
+
+    function closeRate() {
+      rateFor = ""
+      rateError = ""
+      keyCatcher.forceActiveFocus()
+    }
+
+    // `rate` "" goes back to the terms' rate.
+    function saveRate(rate) {
+      if (rate !== "") {
+        var check = Model.checkCycleRate(rate)
+        if (check.error) { rateError = check.error; return }
+        rate = check.value
+      }
+      root.svc.overageRate(fig.company, fig.key, rate, function(r) {
+        if (!r.ok) { moneyBlock.rateError = r.error; return }
+        moneyBlock.closeRate()
+        if (root.page === "month") root.loadMonth()
+      })
+    }
 
     function partTerms(p) {
       return Model.fmtDuration(p.monthlyHours * 3600) + " / " + Model.fmtMoney(p.monthlyFee, moneyBlock.cur)
@@ -944,10 +977,7 @@ Panel {
         Layout.columnSpan: 2
         Layout.fillWidth: true
         visible: text !== ""
-        text: !moneyBlock.m || !moneyBlock.fig || moneyBlock.m.discount === null || moneyBlock.m.discount <= 0 ? "" : "Discount " + Model.fmtMoney(moneyBlock.m.discount, moneyBlock.cur)
-          + " (" + Model.fmtPercent(moneyBlock.m.discountPercent) + ")"
-          + (moneyBlock.m.projected ? " on the " + Model.fmtDuration(moneyBlock.fig.targetSec) + " owed" : "")
-          + (moneyBlock.m.overSec > 0 ? " · " + Model.fmtDuration(moneyBlock.m.overSec) + " over the package" : "")
+        text: moneyBlock.m && moneyBlock.fig ? Model.discountLine(moneyBlock.m, moneyBlock.fig.targetSec, moneyBlock.cur) : ""
         textFormat: Text.PlainText
         color: root.dim
         font.family: root.fontFamily
@@ -974,6 +1004,19 @@ Panel {
         elide: Text.ElideRight
       }
       ChoiceChip {
+        visible: moneyBlock.m !== null && !moneyBlock.m.overageWaived
+        label: "Rate"
+        on: moneyBlock.rateEditing
+        onClicked: moneyBlock.rateEditing ? moneyBlock.closeRate() : moneyBlock.editRate()
+
+        HoverHandler { id: rateHover }
+        PanelToolTip {
+          visible: rateHover.hovered
+          text: "Bill the extra hours of this cycle at another rate; the terms stay as they are"
+          fontFamily: root.fontFamily
+        }
+      }
+      ChoiceChip {
         label: moneyBlock.m && moneyBlock.m.overageWaived ? "Bill them" : "Waive"
         onClicked: root.svc.overage(moneyBlock.m.overageWaived ? "bill" : "waive", moneyBlock.fig.company, moneyBlock.fig.key, function() {
           if (root.page === "month") root.loadMonth()
@@ -985,6 +1028,64 @@ Panel {
           text: moneyBlock.m && moneyBlock.m.overageWaived ? "Bill the extra hours of this cycle again" : "Leave the extra hours of this cycle off the invoice; the report lists them as waived"
           fontFamily: root.fontFamily
         }
+      }
+    }
+
+    // The extra hours under the standard rate.
+    Text {
+      width: parent.width
+      visible: text !== ""
+      text: moneyBlock.m && moneyBlock.fig && moneyBlock.fig.billing === "package" ? Model.extraDiscountLine(moneyBlock.m, moneyBlock.fig.standardRate, moneyBlock.cur) : ""
+      textFormat: Text.PlainText
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      elide: Text.ElideRight
+    }
+
+    // This cycle's extra hour rate.
+    RowLayout {
+      width: parent.width
+      visible: moneyBlock.rateEditing
+      spacing: Style.space(8)
+
+      KeyField {
+        id: rateField
+        radius: Style.cornerRadius
+        allowed: /[0-9.]/
+        Layout.preferredWidth: Style.space(96)
+        foreground: root.foreground
+        accent: root.accent
+        invalid: moneyBlock.rateError !== ""
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.body
+        maximumLength: 8
+        selectOnFocus: true
+        onTextEdited: moneyBlock.rateError = ""
+        onAccepted: moneyBlock.saveRate(rateField.text)
+        onUnhandledKey: function(event) {
+          if (event.key === Qt.Key_Escape) { moneyBlock.closeRate(); event.accepted = true }
+          else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) event.accepted = true
+        }
+      }
+      Text {
+        Layout.fillWidth: true
+        text: moneyBlock.rateError !== "" ? moneyBlock.rateError : moneyBlock.cur + "/h for this cycle"
+        textFormat: Text.PlainText
+        color: moneyBlock.rateError !== "" ? root.urgent : root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        elide: Text.ElideRight
+      }
+      ChoiceChip {
+        visible: moneyBlock.fig !== null && moneyBlock.fig.overageRateSet === true
+        label: moneyBlock.fig ? "Terms rate " + Model.fmtMoney(moneyBlock.fig.overageRateTerms, moneyBlock.cur) : ""
+        onClicked: moneyBlock.saveRate("")
+      }
+      ChoiceChip {
+        label: "Set"
+        on: true
+        onClicked: moneyBlock.saveRate(rateField.text)
       }
     }
 

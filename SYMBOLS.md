@@ -105,7 +105,7 @@ A text field without an editable Qt text control. It draws plain Text and
 - function hitAt L538: the caret shows at the end of its line: { pos, upstream }.
 - function positionAt L544
 
-## Model.js (867 lines)
+## Model.js (902 lines)
 Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - const DAY_NAMES L6
 - const MONTH_NAMES L7
@@ -152,45 +152,48 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function uniformHourly L381: says it all); otherwise each part gets its own line.
 - function monthLine L389: The package line of a cycle: running, finished short or over, hourly, none.
 - function moneySummary L405: { label, amount }; the month page shows the whole breakdown.
-- function daysInMonth L418
-- function shiftMonth L420
-- function monthKey L425
-- function cycleFirst L427
-- function cycleBounds L430: { first, last } date keys of the cycle that starts in month `key`.
-- function cycleOf L439: Key of the cycle holding the date key.
-- function shiftCycle L448
-- function cycleLabel L455: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
-- function dayMonth L466: "21 Oct" / "21 Oct 2026".
-- function ordinal L471
-- function cycleName L476
-- function companyOf L480
-- function companyName L486
-- function activeCompanies L491
-- function nextInList L499: The element after (or before) `current` in `list`, wrapping.
-- function termsLine L506: "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
-- const TERM_RANGES L512
-- function checkTerms L519: clean_terms and parse_day). Returns { error, field }.
-- function sessionTip L539: Hover text of a session row on the month page.
-- function niceHours L555: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
-- function barHeight L561
-- function daySeries L567: The 7 bars of the week chart, the open segment added to today.
-- function weekSeries L585: The 8 bars of the trend, this week (live) last.
-- function monthOpenSecBetween L603: The live segment's seconds that count on the month page (its company, or all).
-- function dayOpenSec L611: midnight (a DST day lasts 23 or 25 hours).
-- function cycleDaySeries L617: Mondays and the days new terms start; markers where terms start.
-- function cycleWeekSeries L637: The ISO weeks touching the cycle, hours inside the cycle only.
-- function rowsFromSegments L663: midnight, `to` -1 while open). Built from stored segments.
-- function rowEndDays L686: end is earlier than the start (past midnight), else 0.
-- function rowNextMinute L695: minute it falls in would overlap it.
-- function rowInstant L702: midnight or for days), so only its minutes are compared.
-- const OVERNIGHT_MAX_SEC L713: its day.
-- function rowStartDate L714
-- function checkRows L730: first, last }.
-- function parseTags L784
-- function clip L794
-- function firstLine L799
+- function discountLine L419: "Package discount 400 € (20 %) · 20h over the package" once past it.
+- function extraDiscountLine L433: 200 € (20 %) against 50 €/h"; nothing when waived or at that rate.
+- function checkCycleRate L441: { error, value }.
+- function daysInMonth L450
+- function shiftMonth L452
+- function monthKey L457
+- function cycleFirst L459
+- function cycleBounds L462: { first, last } date keys of the cycle that starts in month `key`.
+- function cycleOf L471: Key of the cycle holding the date key.
+- function shiftCycle L480
+- function cycleLabel L487: "October 2026" for calendar cycles, else "21 Oct to 20 Nov 2026".
+- function dayMonth L498: "21 Oct" / "21 Oct 2026".
+- function ordinal L503
+- function cycleName L508
+- function companyOf L512
+- function companyName L518
+- function activeCompanies L523
+- function nextInList L531: The element after (or before) `current` in `list`, wrapping.
+- function termsLine L538: "40h · 1.600 € + VAT 21 %" or "Hourly 70 €/h + VAT 21 %".
+- const TERM_RANGES L544
+- function checkTerms L551: clean_terms and parse_day). Returns { error, field }.
+- function sessionTip L571: Hover text of a session row on the month page.
+- function niceHours L587: Axis maximum in hours: the next step of 1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20…
+- function barHeight L593
+- function daySeries L599: The 7 bars of the week chart, the open segment added to today.
+- function weekSeries L617: The 8 bars of the trend, this week (live) last.
+- function monthOpenSecBetween L635: The live segment's seconds that count on the month page (its company, or all).
+- function dayOpenSec L643: midnight (a DST day lasts 23 or 25 hours).
+- function cycleDaySeries L649: Mondays and the days new terms start; markers where terms start.
+- function cycleWeekSeries L669: The ISO weeks touching the cycle, hours inside the cycle only.
+- function rowsFromSegments L695: midnight, `to` -1 while open). Built from stored segments.
+- function rowEndDays L718: end is earlier than the start (past midnight), else 0.
+- function rowNextMinute L727: minute it falls in would overlap it.
+- function rowInstant L734: midnight or for days), so only its minutes are compared.
+- const OVERNIGHT_MAX_SEC L745: its day.
+- function rowStartDate L746
+- function checkRows L762: first, last }.
+- function parseTags L816
+- function clip L826
+- function firstLine L831
 
-## Panel.qml (3088 lines)
+## Panel.qml (3189 lines)
 Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property svc L29
 - property ready L30
@@ -298,14 +301,14 @@ Worklog: a bar pill (the running clock) with a panel of seven pages.
 - component ChoiceChip L800: A pill-shaped choice: filled when on (the WireGuard verdict chip look).
 - component CompanyChips L844: A row of company chips; `companies` items carry id, name and archived.
 - component MoneyBlock L867: `live` from Model.cycleLive, `fig` the helper's cycle figures.
-- component Meter L1057: says the bar should be by now.
-- component ActionRow L1087: A two-line action row with its key, as in the other panels.
-- component SessionRow L1161: A session in a list: day, times, duration; summary and tags under it.
-- component Hints L1234
-- property pillLabel L1263
-- property liveCompanyName L1272
+- component Meter L1158: says the bar should be by now.
+- component ActionRow L1188: A two-line action row with its key, as in the other panels.
+- component SessionRow L1262: A session in a list: day, times, duration; summary and tags under it.
+- component Hints L1335
+- property pillLabel L1364
+- property liveCompanyName L1373
 
-## Service.qml (622 lines)
+## Service.qml (628 lines)
 Worklog service: the one owner of the session state. The shell loads it
 - property shell L32: Injected by omarchy-shell (the service loader).
 - property pluginId L34
@@ -371,31 +374,32 @@ Worklog service: the one owner of the session state. The shell loads it
 - function company L243: use, archive, unarchive, delete (id).
 - function contract L253: action: set (id, from, terms, replace), delete (id, from).
 - function overage L261: Hours over the package in one cycle: action "waive" or "bill".
-- function monthData L264: The month page: key YYYY-MM or "this", company id or "all".
-- function pause L266
-- function resume L274
-- function unpause L283: The away time counts as work: the paused segment runs on.
-- function keepPaused L290
-- function toggle L295
-- function stop L303
-- function back L311
-- function saveDraft L313
-- function confirm L319: null summary or tags: the helper uses the saved draft (IPC confirm).
-- function discard L328
-- function addSession L333
-- function updateSession L338
-- function deleteSession L343
-- function sessions L346: kind "week" with a key YYYY-Www or "this".
-- function exportPeriod L350: "all", or empty for the default (week: all, month: the current company).
-- function announce L364
-- property autoPaused L368
-- function checkReturn L372: Back at the machine after an automatic pause: ask, once.
-- function remind L400
-- property idleMonitor L451: one is created for each setting value and the old one destroyed.
-- property idleMonitorTimeout L452
-- function armIdle L463
-- function idleChanged L476
-- property dataDir L499: Same lookup as the helper's data_dir().
+- function overageRate L263: The extra hour rate of one cycle alone; an empty rate goes back to the terms' rate.
+- function monthData L270: The month page: key YYYY-MM or "this", company id or "all".
+- function pause L272
+- function resume L280
+- function unpause L289: The away time counts as work: the paused segment runs on.
+- function keepPaused L296
+- function toggle L301
+- function stop L309
+- function back L317
+- function saveDraft L319
+- function confirm L325: null summary or tags: the helper uses the saved draft (IPC confirm).
+- function discard L334
+- function addSession L339
+- function updateSession L344
+- function deleteSession L349
+- function sessions L352: kind "week" with a key YYYY-Www or "this".
+- function exportPeriod L356: "all", or empty for the default (week: all, month: the current company).
+- function announce L370
+- property autoPaused L374
+- function checkReturn L378: Back at the machine after an automatic pause: ask, once.
+- function remind L406
+- property idleMonitor L457: one is created for each setting value and the old one destroyed.
+- property idleMonitorTimeout L458
+- function armIdle L469
+- function idleChanged L482
+- property dataDir L505: Same lookup as the helper's data_dir().
 
 ## SessionEditor.qml (674 lines)
 The session form: what was done, tags, the work segments and their totals,
@@ -491,7 +495,7 @@ HelperRunner against fake helpers (sh one-liners). Each case logs one line
 - property slow L18
 - property cases L20
 
-## tests/model.test.js (530 lines)
+## tests/model.test.js (543 lines)
 Model.js: TZ=Europe/Madrid node --test tests
 - const NOW L7
 - function pkg L9

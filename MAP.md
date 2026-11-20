@@ -8,7 +8,7 @@
 | What pauses automatically, and the return prompt | `Service.qml` (lock probe, `armIdle`, `idleChanged`, tick, `checkReturn`) | `Panel.qml` away page |
 | Week, cycle, trend or money figures | `worklog.py` (`build_view`, `week_figures`, `cycle_figures`, `cycle_parts`, `money`) | `Model.js` (`weekLive`, `cycleLive`, `money`), the three test files |
 | Billing cycles (anchor day, keys, labels) | `worklog.py` (`cycle_bounds`, `cycle_of`, `cycle_label`) | `Model.js` (`cycleBounds`, `cycleOf`, `cycleLabel`) must agree, both tested |
-| Companies, contract periods, extra hours | `worklog.py` (`cmd_company`, `cmd_contract`, `cmd_overage`, `clean_terms`, `terms_on`) | `Model.js` (`checkTerms`), `Panel.qml` companies page, `tests/test_companies.py` |
+| Companies, contract periods, extra hours | `worklog.py` (`cmd_company`, `cmd_contract`, `cmd_overage`, `clean_terms`, `terms_on`) | `Model.js` (`checkTerms`, `checkCycleRate`, `discountLine`, `extraDiscountLine`), `Panel.qml` companies page and `MoneyBlock` (Waive, the cycle's Rate form), `Service.qml` (`overage`, `overageRate`), `tests/test_companies.py` |
 | The month page | `worklog.py` (`cmd_month`), `Panel.qml` (`openMonth`, `loadMonth`, `monthRows`, month column) | `Model.js` (`cycleDaySeries`, `cycleWeekSeries`, `sessionTip`) |
 | A line of text in the panel | `Panel.qml`, formatting in `Model.js` (`weekLine`, `paceLine`, `cycleLeftLine`, `weekGuideLine`, `moneySummary`, `fmt*`) | `tests/model.test.js` |
 | A chart | `WeekChart.qml` (`markers`, `thinning`); series in `Model.js` (`daySeries`, `weekSeries`, `cycleDaySeries`, `cycleWeekSeries`) | |

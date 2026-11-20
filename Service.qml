@@ -259,6 +259,12 @@ Item {
 
   // Hours over the package in one cycle: action "waive" or "bill".
   function overage(action, company, key, done) { run(["overage", "--action", action, "--id", String(company), "--month", String(key)], done) }
+  // The extra hour rate of one cycle alone; an empty rate goes back to the terms' rate.
+  function overageRate(company, key, rate, done) {
+    var a = ["overage", "--action", "rate", "--id", String(company), "--month", String(key)]
+    if (rate !== "" && rate !== null && rate !== undefined) a = a.concat(["--rate", String(rate)])
+    run(a, done)
+  }
 
   // The month page: key YYYY-MM or "this", company id or "all".
   function monthData(key, company, done) { run(["month", "--month", key || "this", "--company", company || "all"], done) }
