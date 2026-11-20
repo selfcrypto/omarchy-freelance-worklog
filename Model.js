@@ -415,17 +415,17 @@ function moneySummary(live) {
 
 // The money card's discount lines, each against the standard rate. The
 // package: "Discount 400 € (20 %) on the 40h owed" while under it,
-// "Package discount 400 € (20 %) · 20h over the package" once past it.
+// "Package discount 400 € (20 %)" once past it (the extra hours have their
+// own lines).
 function discountLine(m, targetSec, cur) {
   if (!m || m.discount === null) return ""
-  var over = m.overSec > 0 ? fmtDuration(m.overSec) + " over the package" : ""
   if (m.overSec <= 0) {
     if (m.discount <= 0) return ""
     return "Discount " + fmtMoney(m.discount, cur) + " (" + fmtPercent(m.discountPercent) + ")"
       + (m.projected ? " on the " + fmtDuration(targetSec) + " owed" : "")
   }
-  if (m.packageDiscount <= 0) return over
-  return "Package discount " + fmtMoney(m.packageDiscount, cur) + " (" + fmtPercent(100 * m.packageDiscount / m.packageValue) + ") · " + over
+  if (!(m.packageDiscount > 0)) return ""
+  return "Package discount " + fmtMoney(m.packageDiscount, cur) + " (" + fmtPercent(100 * m.packageDiscount / m.packageValue) + ")"
 }
 
 // The extra hours billed under the standard rate: "Extra hours discount

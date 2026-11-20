@@ -111,7 +111,7 @@ test("month pace and money", () => {
   // Each row against the standard rate: 40 h are 2.000 (400 off), the 20 h over 1.000 (none off).
   assert.deepStrictEqual([over.packageValue, over.packageDiscount, over.packageRate, over.overageValue, over.overageDiscount], [2000, 400, 40, 1000, 0])
   assert.strictEqual(M.discountLine(m.money, 40 * 3600, "€"), "Discount 400 € (20 %) on the 40h owed")
-  assert.strictEqual(M.discountLine(over, 40 * 3600, "€"), "Package discount 400 € (20 %) · 20h over the package")
+  assert.strictEqual(M.discountLine(over, 40 * 3600, "€"), "Package discount 400 € (20 %)")
   assert.strictEqual(M.extraDiscountLine(over, 50, "€"), "")
   // This cycle's extra hours at 40 instead of the standard 50.
   const cut = M.money(Object.assign({}, fig, { overageRate: 40, overageVat: 21 }), 60 * 3600)
