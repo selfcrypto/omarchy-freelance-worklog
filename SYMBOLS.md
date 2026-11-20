@@ -152,7 +152,7 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function uniformHourly L381: says it all); otherwise each part gets its own line.
 - function monthLine L389: The package line of a cycle: running, finished short or over, hourly, none.
 - function moneySummary L405: { label, amount }; the month page shows the whole breakdown.
-- function discountLine L419: "Package discount 400 € (20 %) · 20h over the package" once past it.
+- function discountLine L420: own lines).
 - function extraDiscountLine L433: 200 € (20 %) against 50 €/h"; nothing when waived or at that rate.
 - function checkCycleRate L441: { error, value }.
 - function daysInMonth L450
