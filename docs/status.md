@@ -7,13 +7,13 @@ Budget 15 KB.
 
 | Thing | State |
 |---|---|
-| Version | 0.3.11 (carries 0.3.7 to 0.3.10) for `[Verify]` #13941 on omacom/omarchy-plugin-marketplace, answering HANCORE's four prerequisites of 2026-11-10. 0.3.6 is the last verified (#13348) |
+| Version | 0.3.12 local, not pushed. 0.3.11 (`e1b8a83`) is the last verified (#13941, approved 2026-11-11) |
 | Tests | 106 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 40 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), helper runner (`tests/helper/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
 | Review | 0.3.8: first-look design pass, gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel, before the code (findings reproduced, built in; see decisions). The code itself is not reviewed. 0.3.6: gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel (4 + 7 findings, all reproduced, 9 fixed with tests; see decisions). Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
 
-1. 0.3.11 `[Verify]` #13941 open. Nothing goes to GitHub main while it is open or after it is approved; a new release retargets the open issue.
+1. 0.3.12 is committed locally with six earlier commits (reports, cycle rate); push and `[Verify]` issue wait for Kike.
 2. Not yet checked live: the edit form on the live session (Enter, the pencil, Save, a pause while the form is open), the reminder toast, the light theme, chart clicks with a pointer. `Panel.qml` has no automated test.
 3. Paste decodes each `wl-paste` read on its own, so an accented character cut between two reads arrives as two U+FFFD (since 0.3.0, rare: needs a clipboard owner writing in pieces). Fixing it means a byte-level reader; left alone in 0.3.11 to keep the paste path unchanged.
 4. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
@@ -26,6 +26,7 @@ Budget 15 KB.
 
 ## Done
 
+- **2026-11-22.** 0.3.12 (not pushed): the run switch has an accent track when on, own component `AccentSwitch.qml` (same file as Power Saving's and WireGuard's); `preview.png` shows it (switch redrawn in place). Carries the report table, the cycle's extra hour rate and the summary line breaks below.
 - **2026-11-20.** Report totals are a table: Package and Extra hours rows with hours, rate, value at the standard rate, discount and billed amount before VAT, then Subtotal, VAT and Total. Each row has its own discount. A cycle can bill its extra hours at its own rate (`overage --action rate`, `overageRates` on the company), the terms unchanged: the month page has a Rate chip next to Waive (a field, Set, and "Terms rate" to go back), and its money card shows the package discount and the extra hours discount on their own lines. Committed locally, not released.
 - **2026-11-13.** Reports keep the summary's line breaks: a line break in Markdown and HTML (it used to join the lines into one paragraph). Committed locally, not released (0.3.11 is under review).
 - **2026-11-11.** 0.3.11: HANCORE's four prerequisites and the checklist built from his past reviews. `HelperRunner.qml` runs each helper call in its own process, settled once on exit, failed start, deadline or output cap, with a bounded queue (view and heartbeat merge, drafts merge at the end, one parse per answer) and a stopped process drained first; a failed or stopped write says it may have been saved and the panel re-reads. The helper reads and writes at most 64 MB (`WORKLOG_MAX_LEDGER_MB`), refuses FIFOs at its data and lock paths, prints ASCII JSON, scans only the weeks and cycles a view shows, caps companies and periods at 100. Paste, copy and the lock probe settle when their process cannot start. Data watchers no longer load the files; toasts run under `timeout`. `CLAUDE.md` and `AGENTS.md` are git-ignored. Reviewed by a blind Claude agent (8 findings, 7 fixed, the paste UTF-8 split left as pending 3); the Codex pass was cancelled (usage limit).

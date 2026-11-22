@@ -29,6 +29,7 @@
 | `Service.qml` | Owner of state, helper calls (`run`, `handle`), automatic pauses, IPC, toasts |
 | `HelperRunner.qml` | Helper calls one at a time: a process per call, bounded queue (view and heartbeat merge, a draft merges at the end), each call settled once on exit, failed start, deadline or output cap, a stopped process drained before the next |
 | `Panel.qml` | Bar pill and the panel: track, away, review, editor, history, month and companies pages; `MoneyBlock`, `CompanyChips` |
+| `AccentSwitch.qml` | On/off switch of the track page: stock size, accent track when on |
 | `SessionEditor.qml` | Summary, tags, segment rows with live totals; review, edit, live and new modes |
 | `TimeField.qml` | HH:MM field whose text is not bound to its minutes; selected by a focusing click, places the ":" as digits are typed (`Model.autoColon`) |
 | `KeyField.qml` | Text field without an editable Qt text control: plain Text with its own line layout (`wrapLines`), a caret bar, clicks by measured widths, selection (drag, Shift+keys, double click), dead keys, `keypadDigits` (time boxes), copy and cut through `wl-copy` stdin, paste capped at 4096 bytes and bound to its edit (`pasteGeneration`, `dropPaste`) |

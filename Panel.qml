@@ -1599,13 +1599,12 @@ Panel {
                 onClicked: root.go("companies")
               }
 
-              ToggleSwitch {
+              AccentSwitch {
                 id: runSwitch
                 anchors.verticalCenter: parent.verticalCenter
                 checked: root.sessionState === "running"
                 interactive: root.ready && root.sessionState !== "ending"
-                // On: the theme accent (the shell's selected color is often the text color).
-                foreground: checked ? root.accent : root.foreground
+                foreground: root.foreground
                 onToggled: root.primaryAction()
 
                 PanelToolTip {

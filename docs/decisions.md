@@ -265,3 +265,13 @@ Also, from the same pass: `edit-active` keeps segments under a minute and empty 
 **Decision.** A company keeps `overageRates`, a map from cycle key to the rate its extra hours are billed at in that cycle alone (0 to 10.000, at most 600 cycles). `overage --action rate --rate N` sets it and the same call without `--rate` removes it. The cycle's figures carry `overageRate` (the rate in force), `overageRateTerms` (the terms' rate) and `overageRateSet`. Waiving still wins and keeps the rate for when the hours are billed again. The terms are untouched, so other cycles keep their rate, and the discount is always measured against the standard rate.
 **Why.** Kike, 2026-11-20: his extra hours are 60 an hour, and when he bills a cycle at 50 the summary has to show that discount. Asked whether the rate belongs to the contract or to the cycle, he chose the cycle.
 **Alternative rejected.** A new contract period with another extra hour rate: it changes every later cycle and a one-off discount would need a second period to undo it.
+
+## 2026-11-22 · Switch with an accent track when on
+**Decision.** The panel draws its own switch, `AccentSwitch.qml` (the same file as in `omarchy-power-saving`): size and off look of the shell's `ToggleSwitch`, solid accent track and a knob in the popup background color when on.
+**Why.** Kike: the switch showed only a grey fill when on (the accent passed as `foreground` since 0.3.6 had no effect) and he wants the theme accent. The stock switch takes its on color from the theme's `selected-color`, which the generated `shell.toml` writes as the foreground hex, so no property passed from outside changes it.
+**Alternative rejected.** Setting `selected-color` in the user's `shell.toml`: changes every control of the shell and only on that machine.
+
+## 2026-11-22 · Preview switches redrawn, not recaptured
+**Decision.** For the accent switch, `preview.png` keeps the earlier capture and only its on switches were redrawn in place (accent `#7aa2f7` track, `#1a1b26` knob, the capture's Tokyo Night colors, same size and position).
+**Why.** Nothing else in the panel changed, and a new capture needs the old theme and the demo state again.
+**Alternative rejected.** A full recapture: same picture, at the cost of a theme switch and demo setup on Kike's desktop.
