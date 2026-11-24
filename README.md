@@ -8,6 +8,7 @@ Omarchy bar plugin for freelance hours: one client or several, packages or hourl
 - Companies with contract terms that change from any date: a monthly package (hours, fee, VAT, standard rate, extra hour rate) or hourly billing. A change in the middle of a cycle is prorated by days.
 - Billing cycles per company: the calendar month, or a month from any day (the 15th to the 14th).
 - The cycle against its terms with its pace and this week's hours, the price against the standard rate, extra hours billed, billed at a rate of that cycle alone, or waived; an activity chart of this week by day or the last 8 weeks.
+- A session billed in the cycle you pick (the one before, its own or the next): its hours count in that cycle's package or extra hours, and every view and report keeps the day it was worked.
 - A month page with the package, one chart by day or by week, and every day with its sessions (hover for details, click to edit, + to add time on a day); history by week.
 - Reports for the client, weekly or monthly, in English or Spanish: Markdown, CSV and an HTML page that prints to PDF.
 

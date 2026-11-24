@@ -171,7 +171,7 @@ Panel {
     editorMode = "edit"
     editingId = s.id
     page = "editor"
-    editor.load(Model.rowsFromSegments(s.segments), s.summary, s.tags, s.company || svc.currentCompany)
+    editor.load(Model.rowsFromSegments(s.segments), s.summary, s.tags, s.company || svc.currentCompany, s.billIn)
     Qt.callLater(editor.focusSummary)
   }
 
@@ -278,12 +278,21 @@ Panel {
   readonly property var monthRows: {
     var out = []
     if (!monthData) return out
+    // First the sessions of other dates that this cycle bills.
+    var carried = monthData.carried || []
+    for (var k = 0; k < carried.length; k++) out.push({ kind: "session", date: carried[k].date, session: carried[k], carried: true })
     for (var i = 0; i < monthData.days.length; i++) {
       var d = monthData.days[i]
       out.push({ kind: "day", date: d.date, day: d })
       for (var j = 0; j < d.sessions.length; j++) out.push({ kind: "session", date: d.date, session: d.sessions[j] })
     }
     return out
+  }
+
+  // "21 Oct to 20 Nov 2026" when another cycle than the one of its dates bills the session.
+  function billedIn(s) {
+    var c = s && s.billIn ? companyInfo(s.company) : null
+    return c ? Model.cycleLabel(c.cycleDay, s.billIn) : ""
   }
 
   // The figures the package card shows: the one company's, or null for all.
@@ -573,14 +582,14 @@ Panel {
       if (root.editorMode === "review" || running) root.go("track")
       else root.go(root.returnPage)
     }
-    if (editorMode === "review") svc.confirm(summary, tags, segments, done, company)
-    else if (editorMode === "edit") svc.updateSession(editingId, segments, summary, tags, done, company)
+    if (editorMode === "review") svc.confirm(summary, tags, segments, done, company, editor.billIn)
+    else if (editorMode === "edit") svc.updateSession(editingId, segments, summary, tags, done, company, editor.billIn)
     else if (editorMode === "live") svc.editActive(liveBase, segments, summary, tags, view.active && company !== view.active.company ? company : "", done)
     else if (running) svc.startWithSegments(segments, company, function(r) {
       if (r.ok) svc.saveDraft(summary, tags)
       done(r)
     })
-    else svc.addSession(segments, summary, tags, done, company)
+    else svc.addSession(segments, summary, tags, done, company, editor.billIn)
   }
 
   function cancelEditor() {
@@ -2420,6 +2429,17 @@ Panel {
               font.pixelSize: Style.font.caption
             }
 
+            Text {
+              visible: text !== ""
+              width: parent.width
+              text: Model.carriedLine(root.monthFigures)
+              textFormat: Text.PlainText
+              wrapMode: Text.WordWrap
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+            }
+
             Rectangle {
               visible: root.monthData !== null
               width: parent.width
@@ -2522,8 +2542,11 @@ Panel {
                         Layout.topMargin: Style.space(3)
                         text: monthRow.isDay ? "" : (root.monthCompany === "all" && root.several && root.companyInfo(monthRow.modelData.session.company)
                             ? root.companyInfo(monthRow.modelData.session.company).tag + " · " : "")
+                          + (monthRow.modelData.carried ? Model.dayLabel(monthRow.modelData.date) + " · " : "")
                           + Model.localHM(monthRow.modelData.session.start) + " to " + Model.localHM(monthRow.modelData.session.end)
                           + " · " + Model.fmtDuration(monthRow.modelData.session.workedSec)
+                          + (monthRow.modelData.carried ? " · billed in this cycle"
+                            : (root.billedIn(monthRow.modelData.session) ? " · billed in " + root.billedIn(monthRow.modelData.session) : ""))
                         textFormat: Text.PlainText
                         color: root.foreground
                         font.family: root.fontFamily
@@ -2545,7 +2568,8 @@ Panel {
                     PanelToolTip {
                       visible: !monthRow.isDay && rowHover.hovered
                       text: monthRow.isDay ? "" : Model.sessionTip(monthRow.modelData.session,
-                        root.several ? root.companyInfo(monthRow.modelData.session.company) ? root.companyInfo(monthRow.modelData.session.company).name : "" : "")
+                        root.several ? root.companyInfo(monthRow.modelData.session.company) ? root.companyInfo(monthRow.modelData.session.company).name : "" : "",
+                        root.billedIn(monthRow.modelData.session))
                       fontFamily: root.fontFamily
                     }
                   }

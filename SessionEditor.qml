@@ -39,6 +39,14 @@ Item {
   property var companies: []
   property string company: ""
   readonly property var companyChoices: companies.filter(function(c) { return !c.archived || c.id === editor.company })
+  // The cycle that bills the session; "" is the cycle of its dates.
+  property string billIn: ""
+  readonly property int cycleDay: {
+    for (var i = 0; i < companies.length; i++) if (companies[i].id === company) return companies[i].cycleDay
+    return 1
+  }
+  readonly property bool showBillIn: mode !== "live" && !runsOn
+  readonly property var billChoices: { revision; return Model.billChoices(cycleDay, rowModel.count ? rowModel.get(0).date : dateKey, billIn) }
   readonly property bool showCompanies: companies.filter(function(c) { return !c.archived }).length > 1
     || companies.some(function(c) { return c.archived && c.id === editor.company })
 
@@ -74,8 +82,9 @@ Item {
     return out
   }
 
-  function load(rows, summary, tags, companyId) {
+  function load(rows, summary, tags, companyId, billed) {
     if (companyId !== undefined) company = companyId
+    billIn = billed || ""
     rowModel.clear()
     for (var i = 0; i < rows.length; i++)
       rowModel.append({ date: rows[i].date, from: rows[i].from, to: rows[i].to, open: !!rows[i].open, endReason: rows[i].endReason || "",
@@ -301,6 +310,27 @@ Item {
               opacity: modelData.archived ? 0.6 : 1
               clickable: true
               onClicked: editor.company = modelData.id
+            }
+          }
+        }
+
+        Item { width: 1; height: Style.space(2); visible: editor.showBillIn }
+        Caption { text: "Billed in"; visible: editor.showBillIn }
+
+        Flow {
+          width: parent.width
+          spacing: Style.space(6)
+          visible: editor.showBillIn
+
+          Repeater {
+            model: editor.billChoices
+            delegate: Chip {
+              required property var modelData
+              label: modelData.label
+              on: modelData.on
+              clickable: true
+              maxWidth: Style.space(200)
+              onClicked: editor.billIn = modelData.value
             }
           }
         }

@@ -8,7 +8,7 @@ Budget 15 KB.
 | Thing | State |
 |---|---|
 | Version | 0.3.12 (`4fc1bcd`) on GitHub `main`, `[Verify]` #15659 open since 2026-11-22, bot checks passed, waiting for a maintainer. 0.3.11 (`e1b8a83`) is the last verified (#13941, approved 2026-11-11) |
-| Tests | 106 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 40 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), helper runner (`tests/helper/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
+| Tests | 110 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 42 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), helper runner (`tests/helper/run.sh`), render check (`tests/render/run.sh`), all passing; `omarchy plugin validate` clean |
 | Review | 0.3.8: first-look design pass, gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel, before the code (findings reproduced, built in; see decisions). The code itself is not reviewed. 0.3.6: gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel (4 + 7 findings, all reproduced, 9 fixed with tests; see decisions). Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
@@ -26,6 +26,7 @@ Budget 15 KB.
 
 ## Done
 
+- **2026-11-24.** A session can be billed in a chosen cycle: "Billed in" chips in the session form (the cycle before, its own, the next), `billIn` on the session. Its hours count in that cycle's package or extra hours and leave the cycle of its dates; days, weeks and charts keep the true dates. The month page marks the rows and lists the carried sessions first; reports keep the true date and say how many hours are carried. Committed locally, not released, not checked live.
 - **2026-11-22.** 0.3.12: the run switch has an accent track when on, own component `AccentSwitch.qml` (same file as Power Saving's and WireGuard's); `preview.png` shows it (switch redrawn in place). Carries the report table, the cycle's extra hour rate and the summary line breaks below.
 - **2026-11-20.** Report totals are a table: Package and Extra hours rows with hours, rate, value at the standard rate, discount and billed amount before VAT, then Subtotal, VAT and Total. Each row has its own discount. A cycle can bill its extra hours at its own rate (`overage --action rate`, `overageRates` on the company), the terms unchanged: the month page has a Rate chip next to Waive (a field, Set, and "Terms rate" to go back), and its money card shows the package discount and the extra hours discount on their own lines. Committed locally, not released.
 - **2026-11-13.** Reports keep the summary's line breaks: a line break in Markdown and HTML (it used to join the lines into one paragraph). Committed locally, not released (0.3.11 is under review).

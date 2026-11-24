@@ -19,6 +19,7 @@
 | An IPC call | `Service.qml` (`IpcHandler`, target `worklog`) | `README.md` |
 | A setting (UI preferences only; terms live in the data) | `Service.qml` (properties under settings, `configJson`), `manifest.json` (defaults, schema) | `worklog.py` (`DEFAULT_CONFIG`, `config_from`) when the helper uses it |
 | Report format or language | `worklog.py` (`TEXT`, `month_report`, `week_report`, `render_markdown`, `render_html`, `write_csv`) | export tests in `tests/test_worklog.py` and `tests/test_companies.py` |
+| The cycle that bills a session (`billIn`) | `worklog.py` (`carried`, `clean_bill_in`, `set_bill_in`, `cycle_figures` `carry`, `cmd_month` `carried`, `export_rows` `carried`, `row_parts`) | `SessionEditor.qml` (`billIn`, `billChoices`), `Model.js` (`billChoices`, `carriedLine`), `Panel.qml` (`billedIn`, `monthRows`), `Service.qml` (`--bill-in`) |
 | The data schema | `worklog.py` (`Store`, `company_problem`, `session_problem`, `_migrate`) | `docs/decisions.md` (v2 entries), a migration in `Store._migrate` |
 
 ## Files
@@ -57,14 +58,14 @@
 `view`, `start`, `pause`, `resume`, `unpause`, `stop`, `back`, `draft`, `edit-active`, `confirm`,
 `discard`, `heartbeat`, `recover`, `announce`, `add`, `update`, `delete`, `company`, `contract`,
 `overage`, `sessions`, `month`, `export`. Every call takes `--config <json>` (report settings and the
-v1 terms under `legacy`). The shell sends the whole list as JSON on stdin (`worklog.py --stdin`, `stdin_argv`); test hooks `WORKLOG_DATA_DIR`, `WORKLOG_NOW`, `WORKLOG_TZ`.
+v1 terms under `legacy`); `confirm`, `add` and `update` take `--bill-in <cycle key>` ("" for the cycle of the session's dates). The shell sends the whole list as JSON on stdin (`worklog.py --stdin`, `stdin_argv`); test hooks `WORKLOG_DATA_DIR`, `WORKLOG_NOW`, `WORKLOG_TZ`.
 
 ## Tests
 
 | File | Covers |
 |---|---|
 | `tests/test_worklog.py` | Lifecycle, editing the live session (stale forms refused), recovery, midnight/DST, week/month/money, validation, overlaps, history, backups, corrupt or malformed files, concurrency, exports clipped to the period |
-| `tests/test_companies.py` | v1 migration, cycles (anchor days, short months), terms in force, mid-cycle proration, past cycles unchanged by new terms, hourly and mixed, company scoping, archive rules, validation, extra hours billed or waived, reports (MD, CSV, HTML, es) |
+| `tests/test_companies.py` | v1 migration, cycles (anchor days, short months), terms in force, mid-cycle proration, past cycles unchanged by new terms, hourly and mixed, company scoping, archive rules, validation, extra hours billed or waived, sessions billed in a chosen cycle, reports (MD, CSV, HTML, es) |
 | `tests/model.test.js` | Formatting, live totals, pace and money (prorated, hourly, mixed, extra hours), cycles (same cases as the helper), month page series, terms check, chart series, clock parsing, editor rows |
 | `tests/qml/tst_timefield.qml`, `tests/qml/tst_keyfield.qml` | Typing over a time keeps what is typed; KeyField typing, editing, limits, keys passed on, caret kept in view, dead keys, clicks placing the caret |
 | `tests/render/` | `run.sh` renders SessionEditor and WeekChart under `qs` (the shell's Commons and Ui linked in) at 280 and 400 px, dark and light, with long text, for a confirmed and a running session; fails on anything past the edges or a bar in two tones (`magick`), saves PNGs. The live cases drive the form (running row stays last and open, no summary needed) |

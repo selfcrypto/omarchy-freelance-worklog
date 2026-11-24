@@ -541,3 +541,24 @@ test("a start minutes ahead is refused, not moved a day back", () => {
   assert.strictEqual(M.rowStartDate({ date: d, from: 13 * 60 + 1, to: -1, open: true }, early), "2026-10-29")
   assert.strictEqual(M.rowStartDate({ date: d, from: 12 * 60 + 59, to: -1, open: true }, early), d)
 })
+
+test("a session's billing cycle: the one before, its own and the next", () => {
+  var c = M.billChoices(21, "2026-10-19", "")
+  assert.deepStrictEqual(c.map(x => x.key), ["2026-08", "2026-09", "2026-10"])
+  assert.deepStrictEqual(c.map(x => x.value), ["2026-08", "", "2026-10"])
+  assert.deepStrictEqual(c.map(x => x.on), [false, true, false])
+  assert.strictEqual(c[2].label, "21 Oct to 20 Nov 2026")
+  assert.deepStrictEqual(M.billChoices(21, "2026-10-19", "2026-10").map(x => x.on), [false, false, true])
+  // A stored cycle further away stays on the list.
+  assert.deepStrictEqual(M.billChoices(1, "2026-10-19", "2027-01").map(x => x.key), ["2026-09", "2026-10", "2026-11", "2027-01"])
+})
+
+test("carried hours of a cycle in one line", () => {
+  assert.strictEqual(M.carriedLine({ carriedSec: 7200, carriedOutSec: 0 }), "2h from other dates billed in this cycle")
+  assert.strictEqual(M.carriedLine({ carriedSec: 7200, carriedOutSec: 5400 }),
+    "2h from other dates billed in this cycle · 1h 30m of these days billed in another cycle")
+  assert.strictEqual(M.carriedLine({ carriedSec: 0, carriedOutSec: 0 }), "")
+  assert.strictEqual(M.carriedLine(null), "")
+  var s = { summary: "Did it", segments: [{ start: "2026-10-19T08:00:00Z", end: "2026-10-19T09:00:00Z" }], tags: [] }
+  assert.strictEqual(M.sessionTip(s, "", "21 Oct to 20 Nov 2026"), "Did it\n10:00 to 11:00\nBilled in 21 Oct to 20 Nov 2026")
+})

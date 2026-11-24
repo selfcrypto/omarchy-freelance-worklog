@@ -567,8 +567,30 @@ function checkTerms(t) {
   return { error: "", field: "" }
 }
 
-// Hover text of a session row on the month page.
-function sessionTip(s, companyNameText) {
+// The cycles a session can be billed in: the one before its own, its own
+// and the next, plus the stored one when it is further away. `value` is what
+// the helper takes: "" for the session's own cycle.
+function billChoices(cycleDay, dateKey, billIn) {
+  var own = cycleOf(cycleDay, dateKey)
+  var keys = [shiftCycle(own, -1), own, shiftCycle(own, 1)]
+  if (billIn && keys.indexOf(billIn) === -1) keys.push(billIn)
+  keys.sort()
+  return keys.map(function(k) {
+    return { key: k, value: k === own ? "" : k, label: cycleLabel(cycleDay, k), on: k === (billIn || own) }
+  })
+}
+
+// "2h from other dates billed in this cycle · 3h of these days billed in another cycle"
+function carriedLine(fig) {
+  var out = []
+  if (fig && fig.carriedSec > 0) out.push(fmtDuration(fig.carriedSec) + " from other dates billed in this cycle")
+  if (fig && fig.carriedOutSec > 0) out.push(fmtDuration(fig.carriedOutSec) + " of these days billed in another cycle")
+  return out.join(" · ")
+}
+
+// Hover text of a session row on the month page. `billedText`: the cycle
+// that bills it when it is not the one of its dates.
+function sessionTip(s, companyNameText, billedText) {
   var segs = []
   for (var i = 0; i < s.segments.length; i++) {
     var g = s.segments[i]
@@ -578,6 +600,7 @@ function sessionTip(s, companyNameText) {
   var lines = [clip(String(s.summary || "").trim(), 300) || "No summary", segs.join(" · ")]
   if (s.tags && s.tags.length) lines.push(s.tags.join(", "))
   if (companyNameText) lines.push(companyNameText)
+  if (billedText) lines.push("Billed in " + billedText)
   return lines.join("\n")
 }
 
@@ -835,6 +858,8 @@ function firstLine(s) {
 
 if (typeof module !== "undefined") {
   module.exports = {
+    billChoices: billChoices,
+    carriedLine: carriedLine,
     fmtDuration: fmtDuration,
     fmtClock: fmtClock,
     fmtHours: fmtHours,

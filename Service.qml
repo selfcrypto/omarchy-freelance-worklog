@@ -322,8 +322,10 @@ Item {
   }
 
   // null summary or tags: the helper uses the saved draft (IPC confirm).
-  function confirm(summary, tags, segments, done, company) {
+  // billIn: the key of the cycle that bills the session, "" for the cycle of its dates.
+  function confirm(summary, tags, segments, done, company, billIn) {
     var args = ["confirm"]
+    if (billIn !== null && billIn !== undefined) args = args.concat(["--bill-in", String(billIn)])
     if (company) args = args.concat(["--company", String(company)])
     if (summary !== null && summary !== undefined) args = args.concat(["--summary", String(summary)])
     if (tags !== null && tags !== undefined) args = args.concat(["--tags", String(tags)])
@@ -336,14 +338,14 @@ Item {
     run(["discard"], done)
   }
 
-  function addSession(segments, summary, tags, done, company) {
+  function addSession(segments, summary, tags, done, company, billIn) {
     run(["add", "--segments", JSON.stringify(segments), "--summary", String(summary || ""), "--tags", String(tags || "")]
-      .concat(company ? ["--company", String(company)] : []), done)
+      .concat(company ? ["--company", String(company)] : []).concat(["--bill-in", String(billIn || "")]), done)
   }
 
-  function updateSession(id, segments, summary, tags, done, company) {
+  function updateSession(id, segments, summary, tags, done, company, billIn) {
     run(["update", "--id", String(id), "--segments", JSON.stringify(segments), "--summary", String(summary || ""), "--tags", String(tags || "")]
-      .concat(company ? ["--company", String(company)] : []), done)
+      .concat(company ? ["--company", String(company)] : []).concat(["--bill-in", String(billIn || "")]), done)
   }
 
   function deleteSession(id, done) { run(["delete", "--id", String(id)], done) }

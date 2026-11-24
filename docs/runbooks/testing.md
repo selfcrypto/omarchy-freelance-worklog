@@ -4,8 +4,8 @@
 
 ```bash
 cd ~/Work/omarchy-freelance-worklog
-python3 -m unittest discover -s tests      # helper, 106 tests, ~60 s
-node --test tests/                         # Model.js, 40 tests (sets TZ=Europe/Madrid itself)
+python3 -m unittest discover -s tests      # helper, 110 tests, ~60 s
+node --test tests/                         # Model.js, 42 tests (sets TZ=Europe/Madrid itself)
 QT_QPA_PLATFORM=offscreen /usr/lib/qt6/bin/qmltestrunner -input tests/qml   # KeyField, TimeField: 33 tests
 bash tests/paste/run.sh                    # KeyField clipboard: UTF-8 text type, paste stopped early, 4096 bytes kept, copy on stdin, failed cut keeps the text, a late paste dropped after a form reload, an edit or a closed form, paste and copy settled when they cannot start (fakes in bin/, runs qs)
 bash tests/helper/run.sh                   # HelperRunner: failed start, deadline and drain, bounded queue, merged calls, output cap (runs qs)
