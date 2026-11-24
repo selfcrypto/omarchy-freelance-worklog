@@ -439,6 +439,9 @@ def session_problem(s, allow_open=False):
             return "segment %d: %s" % (j + 1, e.error)
     if not isinstance(s.get("summary", ""), str) or not isinstance(s.get("tags", []), list):
         return "summary or tags of the wrong type"
+    bill = s.get("billIn")
+    if bill is not None and not (isinstance(bill, str) and re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", bill)):
+        return "billIn is not a month"
     return ""
 
 
@@ -967,13 +970,16 @@ def ledger_limit_bytes():
     return max(1, mb) << 20
 
 
-def all_segments(store, include_active, now, company=None, since=None):
+def all_segments(store, include_active, now, company=None, since=None, billed=False):
     """Closed segments of the confirmed sessions and, when asked, of the live
     one (its open segment is the panel's to add). company: an id or None.
     since: a UTC datetime; segments that ended before it are left out, so a
-    view over recent weeks does not gather the whole history."""
+    view over recent weeks does not gather the whole history. billed: without
+    the sessions set to a cycle (`billIn`), which `carried` counts."""
     out = []
     for s in store.log["sessions"]:
+        if billed and s.get("billIn"):
+            continue
         if company is None or s.get("company") == company:
             if since is None:
                 out.extend(s["segments"])
@@ -991,6 +997,45 @@ def sec_between(segments, start, end, now):
         s, e = seg_bounds(seg, now)
         total += overlap_sec(s, e, start, end)
     return total
+
+
+def carried(store, company, key, now):
+    """The seconds a cycle bills from the sessions set to it, whenever they
+    were worked, and the seconds worked on its days that another cycle bills."""
+    first, last = cycle_bounds(company["cycleDay"], key)
+    a, b = day_start(first), day_start(last + timedelta(days=1))
+    into = out = 0
+    for s in store.log["sessions"]:
+        k = s.get("billIn")
+        if not k or s.get("company") != company["id"]:
+            continue
+        if k == key:
+            into += worked_sec(s["segments"], now)
+        else:
+            out += sec_between(s["segments"], a, b, now)
+    return into, out
+
+
+def clean_bill_in(value, company, segments):
+    """The key of the cycle a session is billed in, or "" when it is the
+    cycle its work falls in anyway."""
+    if not value:
+        return ""
+    value = str(value)
+    if not re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", value):
+        raise Refusal("not a month: " + value[:20], "billIn")
+    first, last = cycle_bounds(company["cycleDay"], value)
+    if parse_iso(segments[0]["start"]) >= day_start(first) and parse_iso(segments[-1]["end"]) <= day_start(last + timedelta(days=1)):
+        return ""
+    return value
+
+
+def set_bill_in(store, session, value):
+    key = clean_bill_in(value, company_by_id(store, session["company"]), session["segments"])
+    if key:
+        session["billIn"] = key
+    else:
+        session.pop("billIn", None)
 
 
 def week_figures(segments, monday, today, target_sec, now):
@@ -1019,9 +1064,11 @@ def days_elapsed(first, last, today):
     return (today - first).days + 1
 
 
-def cycle_figures(company, key, segments, today, now):
+def cycle_figures(company, key, segments, today, now, carry=(0, 0)):
     """One company's cycle: owed hours, pace and the parts its terms cut it
-    into. `segments` are that company's."""
+    into. `segments` are that company's, without the sessions set to a cycle;
+    `carry` is `carried()`: its first figure counts in the first part with
+    terms."""
     first, last = cycle_bounds(company["cycleDay"], key)
     n_days = (last - first).days + 1
     parts = []
@@ -1046,6 +1093,8 @@ def cycle_figures(company, key, segments, today, now):
         if a <= today:
             live_part = i
         parts.append(part)
+    carried_part = next((i for i, p in enumerate(parts) if p["billing"] != "none"), 0)
+    parts[carried_part]["workedSec"] += carry[0]
     kinds = {p["billing"] for p in parts}
     billing = kinds.pop() if len(kinds) == 1 else "mixed"
     elapsed = days_elapsed(first, last, today)
@@ -1068,6 +1117,9 @@ def cycle_figures(company, key, segments, today, now):
         "elapsedDays": elapsed,
         "daysLeft": n_days - elapsed + (1 if first <= today <= last else 0),
         "workedSec": sum(p["workedSec"] for p in parts),
+        "carriedSec": carry[0],
+        "carriedOutSec": carry[1],
+        "carriedPart": carried_part,
         "targetSec": sum(p["owedSec"] for p in parts),
         "expectedSec": int(round(expected)),
         "billing": billing,
@@ -1169,6 +1221,7 @@ def session_row(s, now):
         "summary": s.get("summary", ""),
         "tags": s.get("tags", []),
         "source": s.get("source", "timer"),
+        "billIn": s.get("billIn", ""),
     }
 
 
@@ -1196,7 +1249,8 @@ def build_view(store, now):
     every = all_segments(store, True, now, None, day_start(today))
     week = week_figures(mine, monday, today, guide_on(company, today), now)
     week["company"] = cid
-    month = cycle_figures(company, ckey, mine, today, now)
+    month = cycle_figures(company, ckey, all_segments(store, True, now, cid, since, billed=True), today, now,
+                          carried(store, company, ckey, now))
     counts = session_counts(store)
     month["money"] = money(month, month["workedSec"])
     trend = []
@@ -1447,6 +1501,7 @@ def cmd_confirm(store, args, now):
         "createdAt": iso(now),
         "updatedAt": iso(now),
     }
+    set_bill_in(store, session, args.bill_in)
     store.log["sessions"].append(session)
     store.active = None
     return session
@@ -1505,7 +1560,7 @@ def cmd_add(store, args, now):
     tags = clean_tags(args.tags)
     company = resolve_company(store, args.company)["id"] if args.company else store.log["currentCompany"]
     check_no_overlap(store, segments, now)
-    store.log["sessions"].append({
+    session = {
         "id": new_id(now),
         "company": company,
         "segments": segments,
@@ -1514,7 +1569,9 @@ def cmd_add(store, args, now):
         "source": "manual",
         "createdAt": iso(now),
         "updatedAt": iso(now),
-    })
+    }
+    set_bill_in(store, session, args.bill_in)
+    store.log["sessions"].append(session)
 
 
 def cmd_update(store, args, now):
@@ -1524,7 +1581,12 @@ def cmd_update(store, args, now):
     tags = clean_tags(args.tags) if args.tags is not None else s["tags"]
     company = session_company(store, args, s.get("company"))
     check_no_overlap(store, segments, now, skip_id=s["id"])
+    bill = clean_bill_in(args.bill_in if args.bill_in is not None else s.get("billIn"), company_by_id(store, company), segments)
     s.update({"segments": segments, "summary": summary, "tags": tags, "company": company, "updatedAt": iso(now)})
+    if bill:
+        s["billIn"] = bill
+    else:
+        s.pop("billIn", None)
 
 
 def cmd_delete(store, args, now):
@@ -1751,16 +1813,17 @@ def cmd_month(store, args, now):
     cycle_segs = {}
     for c in companies_sorted(store) if not company else []:
         a, b = cycle_bounds(c["cycleDay"], key)
-        cycle_segs[c["id"]] = all_segments(store, True, now, c["id"], day_start(a))
+        cycle_segs[c["id"]] = all_segments(store, True, now, c["id"], day_start(a), billed=True)
         if sec_between(cycle_segs[c["id"]], day_start(a), day_start(b + timedelta(days=1)), now) > 0 \
+                or carried(store, c, key, now)[0] \
                 or (store.active and store.active["session"].get("company") == c["id"]):
             shown.append(c)
     companies = []
     for c in shown:
         ckey = key
         if c["id"] not in cycle_segs:
-            cycle_segs[c["id"]] = all_segments(store, True, now, c["id"], day_start(cycle_bounds(c["cycleDay"], ckey)[0]))
-        fig = cycle_figures(c, ckey, cycle_segs[c["id"]], today, now)
+            cycle_segs[c["id"]] = all_segments(store, True, now, c["id"], day_start(cycle_bounds(c["cycleDay"], ckey)[0]), billed=True)
+        fig = cycle_figures(c, ckey, cycle_segs[c["id"]], today, now, carried(store, c, ckey, now))
         fig["money"] = money(fig, fig["workedSec"])
         companies.append({"id": c["id"], "name": c["name"], "tag": c["tag"], "archived": bool(c.get("archived")), "figures": fig})
     weeks = []
@@ -1785,6 +1848,9 @@ def cmd_month(store, args, now):
         "startAt": iso(day_start(first)), "endAt": iso(day_start(last + timedelta(days=1))),
         "workedSec": sum(x["workedSec"] for x in days),
         "days": days, "weeks": weeks, "companies": companies,
+        # The sessions this cycle bills by choice, worked on whatever day.
+        "carried": [session_row(s, now) for s in store.log["sessions"]
+                    if company and s.get("company") == cid and s.get("billIn") == key],
         "invoice": [{"currency": k, "net": v} for k, v in invoice.items()],
     }
 
@@ -1833,6 +1899,8 @@ TEXT = {
         "total_row": "Total",
         "week_total": "Total: {worked} of {guide}.",
         "week_total_plain": "Total: {worked}.",
+        "carried_in": "{hours} worked outside these dates are billed in this cycle.",
+        "carried_out": "{hours} worked on these dates are billed in another cycle.",
         "rounded": "Each session rounded to the nearest 15 minutes.",
         "footer": "Sessions: {n}. Generated {when}.",
         "empty": "No sessions in this period.",
@@ -1880,6 +1948,8 @@ TEXT = {
         "total_row": "Total",
         "week_total": "Total: {worked} de {guide}.",
         "week_total_plain": "Total: {worked}.",
+        "carried_in": "{hours} trabajadas fuera de estas fechas se facturan en este ciclo.",
+        "carried_out": "{hours} trabajadas en estas fechas se facturan en otro ciclo.",
         "rounded": "Cada sesión redondeada al cuarto de hora más cercano.",
         "footer": "Sesiones: {n}. Generado el {when}.",
         "empty": "Sin sesiones en este periodo.",
@@ -1952,15 +2022,17 @@ def slug(name):
     return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:24].strip("-") or "company"
 
 
-def export_rows(sessions, now, rounding_min, period_start, period_end, names=None):
+def export_rows(sessions, now, rounding_min, period_start, period_end, names=None, carried=False):
     """One row per session, its segments clipped to the period, so a session
-    across a month or week boundary counts in each by its own part."""
+    across a month or week boundary counts in each by its own part. carried:
+    sessions a cycle bills by choice, whole, with their own dates."""
     rows = []
     for s in sessions:
         clipped = []
         for seg in s["segments"]:
             a, b = seg_bounds(seg, now)
-            a, b = max(a, period_start), min(b, period_end)
+            if not carried:
+                a, b = max(a, period_start), min(b, period_end)
             if b > a:
                 clipped.append({"start": iso(a), "end": iso(b)})
         if not clipped:
@@ -1977,13 +2049,17 @@ def export_rows(sessions, now, rounding_min, period_start, period_end, names=Non
             "summary": s.get("summary", ""),
             "company": (names or {}).get(s.get("company"), ""),
             "segments": clipped,
+            "carried": carried,
         })
     return rows
 
 
-def row_parts(row, parts, now):
+def row_parts(row, parts, now, carried_part=0):
     """A row's (rounded) seconds split over the terms parts by where its
-    segments fall; rounding moves the difference to the part with most."""
+    segments fall; rounding moves the difference to the part with most. A
+    carried row counts whole in the part the cycle's figures put it in."""
+    if row.get("carried"):
+        return [row["worked"] if i == carried_part else 0 for i in range(len(parts))]
     raw = [sec_between(row["segments"], day_start(date.fromisoformat(p["from"])),
                        day_start(date.fromisoformat(p["to"]) + timedelta(days=1)), now) for p in parts]
     total = sum(raw)
@@ -2065,7 +2141,7 @@ def month_report(company, fig, rows, cfg, now):
     # Worked seconds per part from the (rounded) rows, by where their segments fall.
     part_worked = [0] * len(fig["parts"])
     for r in rows:
-        for i, sec in enumerate(row_parts(r, fig["parts"], now)):
+        for i, sec in enumerate(row_parts(r, fig["parts"], now, fig.get("carriedPart", 0))):
             part_worked[i] += sec
     total = sum(r["worked"] for r in rows)
     m = money(fig, total, part_worked)
@@ -2131,6 +2207,11 @@ def month_report(company, fig, rows, cfg, now):
                     body.append([t["row_span_none"].format(span=span), fmt_duration(l["workedSec"]), t["not_billed"], "", "", eur(0.0)])
             if len(body) > 1:
                 body.append([t["subtotal"], fmt_duration(total), "", "", "", eur(m["net"])])
+    carried_in = sum(r["worked"] for r in rows if r.get("carried"))
+    if carried_in:
+        totals.append(t["carried_in"].format(hours=fmt_duration(carried_in)))
+    if fig.get("carriedOutSec"):
+        totals.append(t["carried_out"].format(hours=fmt_duration(fig["carriedOutSec"])))
     table = None
     if body:
         vat_row = t["vat_row"].format(vat=fmt_rate(next(iter(vats)), lang)) if len(vats) == 1 else t["vat_plain"]
@@ -2316,14 +2397,19 @@ def cmd_export(store, args, now, cfg):
         if targets is None:
             # Each company's cycle that starts in this month, when it has sessions.
             targets = [c for c in companies_sorted(store)
-                       if sessions_in(store, *cycle_bounds(c["cycleDay"], month_key), now, c["id"])]
+                       if sessions_in(store, *cycle_bounds(c["cycleDay"], month_key), now, c["id"])
+                       or carried(store, c, month_key, now)[0]]
         reports = []
         for c in targets:
             key = month_key_arg(args.month, c, today) if company else month_key
-            fig = cycle_figures(c, key, all_segments(store, False, now, c["id"]), today, now)
+            fig = cycle_figures(c, key, all_segments(store, False, now, c["id"], billed=True), today, now, carried(store, c, key, now))
             a, b = date.fromisoformat(fig["start"]), date.fromisoformat(fig["end"])
-            rows = export_rows(sessions_in(store, a, b, now, c["id"]), now, cfg["reportRoundingMinutes"],
-                               day_start(a), day_start(b + timedelta(days=1)), names)
+            own = [s for s in sessions_in(store, a, b, now, c["id"]) if not s.get("billIn")]
+            moved = [s for s in store.log["sessions"] if s.get("company") == c["id"] and s.get("billIn") == key]
+            rows = export_rows(own, now, cfg["reportRoundingMinutes"], day_start(a), day_start(b + timedelta(days=1)), names)
+            rows += export_rows(moved, now, cfg["reportRoundingMinutes"], None, None, names, carried=True)
+            if moved:
+                rows.sort(key=lambda r: r["start"])
             reports.append(write_report(out_dir, stem(c, key), month_report(c, fig, rows, cfg, now), rows, cfg))
         if company:
             return reports[0]
@@ -2374,6 +2460,7 @@ def parser():
     p.add_argument("--terms")
     p.add_argument("--replace")
     p.add_argument("--rate")
+    p.add_argument("--bill-in", dest="bill_in")
     return p
 
 

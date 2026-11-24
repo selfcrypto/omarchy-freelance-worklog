@@ -678,6 +678,90 @@ class Companies(unittest.TestCase):
         sept = self.run_cmd("month", "--month", "2026-09", "--company", "c_0001")["month"]
         self.assertEqual(len(sept["days"][-1]["sessions"]), 1)
 
+    # -------------------------------------------------------------- billed in another cycle
+
+    def carry(self, start, end, key, **kw):
+        return self.run_cmd("add", "--segments", json.dumps([seg(start, end)]), "--summary", "late work", "--bill-in", key, **kw)
+
+    def test_session_billed_in_the_next_cycle(self):
+        self.terms("c_0001", "2026-09-01", replace="2026-10-01", monthlyHours=40, monthlyFee=1600)
+        self.carry("2026-09-29T08:00:00Z", "2026-09-29T10:00:00Z", "2026-10")
+        self.add([seg("2026-10-05T08:00:00Z", "2026-10-05T11:00:00Z")])
+        sept, octo = self.figures("2026-09", "c_0001"), self.figures("2026-10", "c_0001")
+        self.assertEqual((sept["workedSec"], sept["carriedSec"], sept["carriedOutSec"]), (0, 0, 7200))
+        self.assertEqual((octo["workedSec"], octo["carriedSec"], octo["carriedOutSec"]), (5 * 3600, 7200, 0))
+        # Owed hours, fee and pace of both cycles are the terms' own.
+        self.assertEqual((sept["targetSec"], octo["targetSec"], octo["money"]["fee"]), (40 * 3600, 40 * 3600, 1600))
+        # The day keeps the work and its session says where it is billed.
+        month = self.month("2026-09", "c_0001")
+        day = month["days"][28]
+        self.assertEqual((day["workedSec"], day["sessions"][0]["billIn"]), (7200, "2026-10"))
+        self.assertEqual(month["carried"], [])
+        self.assertEqual([r["date"] for r in self.month("2026-10", "c_0001")["carried"]], ["2026-09-29"])
+        # The week keeps it too.
+        week = self.run_cmd("sessions", "--week", "2026-W40")["sessions"]
+        self.assertEqual(week["figures"]["workedSec"], 7200)
+        # Back to its own cycle.
+        sid = self.log()["sessions"][0]["id"]
+        self.run_cmd("update", "--id", sid, "--bill-in", "")
+        self.assertNotIn("billIn", self.log()["sessions"][0])
+        self.assertEqual(self.figures("2026-09", "c_0001")["workedSec"], 7200)
+        self.assertEqual(self.figures("2026-10", "c_0001")["workedSec"], 3 * 3600)
+
+    def test_carried_hours_count_for_the_extra_hours(self):
+        self.terms("c_0001", "2026-09-01", replace="2026-10-01", monthlyHours=10, monthlyFee=500, overageRate=45)
+        self.add([seg("2026-09-28T07:00:00Z", "2026-09-28T19:00:00Z")])  # 12 h in September
+        self.add([seg("2026-10-05T07:00:00Z", "2026-10-05T17:00:00Z")])  # 10 h in October
+        self.assertEqual(self.figures("2026-09", "c_0001")["money"]["overSec"], 7200)
+        sid = self.log()["sessions"][0]["id"]
+        self.run_cmd("update", "--id", sid, "--bill-in", "2026-10")
+        sept, octo = self.figures("2026-09", "c_0001")["money"], self.figures("2026-10", "c_0001")["money"]
+        self.assertEqual((sept["overSec"], sept["net"]), (0, 500))
+        self.assertEqual((octo["overSec"], octo["overageNet"], octo["net"]), (12 * 3600, 540, 1040))
+
+    def test_bill_in_is_checked_and_kept_only_when_it_moves_the_session(self):
+        self.carry("2026-10-05T08:00:00Z", "2026-10-05T10:00:00Z", "2026-10")
+        self.assertNotIn("billIn", self.log()["sessions"][0])
+        bad = self.carry("2026-10-06T08:00:00Z", "2026-10-06T10:00:00Z", "2026-13", ok=False)
+        self.assertEqual(bad["field"], "billIn")
+        self.assertEqual(len(self.log()["sessions"]), 1)
+        # A session over the cycle's edge is whole in the cycle it is set to.
+        self.carry("2026-09-30T20:00:00Z", "2026-10-01T00:00:00Z", "2026-09")
+        self.assertEqual(self.log()["sessions"][0]["billIn"], "2026-09")
+        self.assertEqual(self.figures("2026-10", "c_0001")["workedSec"], 7200)
+        # Times moved into the cycle drop the choice.
+        sid = self.log()["sessions"][0]["id"]
+        self.run_cmd("update", "--id", sid, "--segments", json.dumps([seg("2026-09-30T18:00:00Z", "2026-09-30T20:00:00Z")]))
+        self.assertNotIn("billIn", self.log()["sessions"][0])
+        # A stored key that is not a month is refused on load.
+        log = self.log()
+        log["sessions"][0]["billIn"] = "next"
+        with open(os.path.join(self.dir, "worklog.json"), "w") as f:
+            json.dump(log, f)
+        self.assertFalse(self.run_cmd("view", ok=False)["ok"])
+
+    def test_report_of_a_cycle_with_carried_sessions(self):
+        self.terms("c_0001", "2026-09-01", replace="2026-10-01")
+        self.terms("c_0001", "2026-10-01", billing="hourly", standardRate=70, vatPercent=21)
+        self.carry("2026-09-29T08:00:00Z", "2026-09-29T10:00:00Z", "2026-10")
+        self.add([seg("2026-10-05T08:00:00Z", "2026-10-05T11:00:00Z")])
+        r = self.run_cmd("export", "--month", "2026-10", "--out", self.out)["export"]
+        self.assertEqual(r["sessions"], 2)
+        with open(r["markdown"]) as f:
+            md = f.read()
+        # The carried row keeps its date and is billed at this cycle's rate.
+        self.assertIn("| Tue 29 Sep | 10:00 to 12:00 | 2h |", md)
+        self.assertIn("| Hours worked | 5h | 70,00 €/h | 350,00 € |", md)
+        self.assertIn("2h worked outside these dates are billed in this cycle.", md)
+        with open(r["csv"]) as f:
+            self.assertIn("2026-09-29,", f.read())
+        r = self.run_cmd("export", "--month", "2026-09", "--out", self.out, config={"reportLanguage": "es"})["export"]
+        self.assertEqual(r["sessions"], 0)
+        with open(r["markdown"]) as f:
+            md = f.read()
+        self.assertIn("2h trabajadas en estas fechas se facturan en otro ciclo.", md)
+        self.assertIn("Sin sesiones en este periodo.", md)
+
 
 if __name__ == "__main__":
     unittest.main()
