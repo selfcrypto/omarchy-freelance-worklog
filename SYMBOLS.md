@@ -213,7 +213,7 @@ Pure helpers shared by Service.qml, Panel.qml and the editor: formatting,
 - function clip L849
 - function firstLine L854
 
-## Panel.qml (3238 lines)
+## Panel.qml (3250 lines)
 Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property svc L29
 - property ready L30
@@ -228,111 +228,114 @@ Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property editorMode L40
 - property liveBase L42: The live session's editBase when its form opened.
 - property editingId L43
-- property confirmAction L44
-- property historyWeek L47: History: one week at a time.
-- property history L48
-- property cursor L49
-- property returnPage L51: Where the editor goes back to after an edit or an add.
-- property monthKey L54: Month page: a cycle key ("this" until loaded) and a company id or "all".
-- property monthCompany L55
-- property monthData L56
-- property monthCursor L57
-- property companiesMode L60: Companies page: list, company (form) or contract (form).
-- property companyCursor L61
-- property formCompanyId L62
-- property formFrom L63
-- property formError L64
-- property formErrorField L65
-- property several L67
-- property monthMeta L69
-- property companiesTitle L82
-- property companiesMeta L84
-- function companyInfo L92
-- property foreground L94
-- property accent L95
-- property urgent L96
-- property dim L97
-- property fontFamily L98
-- property hoverFill L99
-- property reasonText L101
-- property footerKeys L108: button stay beside it (away actions, discard, add on a day).
-- property activityRange L129: Track page: the activity chart shows this week ("week") or 8 weeks ("weeks").
-- property monthChart L131: Month page: hours by day ("days") or by week ("weeks").
-- function go L135
-- function newEntry L158: dateKey: the day the new rows fall on (the month page's day rows).
-- function editSession L169
-- function editLive L179: The running or paused session in the form; once it ended, the review.
-- function openMonth L194
-- property monthRequest L205: so a slow reply never shows another company or cycle than the one picked.
-- function loadMonth L206
-- property monthLimit L229: The cycle the month page cannot go past: the one holding today.
-- function shiftMonth L235
-- property monthFilters L246: company, then archived ones that have sessions in the shown period.
-- function setMonthCompany L260
-- function cycleMonthCompany L272
-- property monthRows L278: Day and session rows, flattened for the keyboard cursor.
-- function billedIn L293: "21 Oct to 20 Nov 2026" when another cycle than the one of its dates bills the session.
-- property monthFigures L299: The figures the package card shows: the one company's, or null for all.
-- property monthOpenSec L300
-- property monthLiveFig L301
-- property monthSeries L303
-- property monthWeekSeries L304
-- property monthGuideHours L305
-- function formKey L308: Field keys on the companies forms: Ctrl+Enter saves, Esc goes back to the list.
-- function ensureVisible L325: Scroll the panel so `item` (a row) is in view.
-- property flashFrom L335: for a moment (`flashFrom` to `flashTo`, date keys).
-- property flashTo L336
-- function dayRowIndex L343
-- function revealDays L348
-- function revealWeek L362
-- function monthActivate L370
-- function askDeleteMonthRow L377
-- property selectedCompanyId L392: Company rows, the selected company's periods under it (newest first).
-- property companyRows L393
-- function companyIndex L405
-- property companyRow L410
-- property selectedCompany L411
-- function selectCompanyRow L413
-- function moveCompanyCursor L425
-- function activateCompanyRow L429
-- function editCompany L436
-- function saveCompany L447
-- function editPeriod L465: A period of `c`; null `period` adds one from the next cycle's first day.
-- property termsBilling L486
-- property termsDraft L487
-- property termsCheck L492
-- property termsCaption L495: A date in the middle of a cycle prorates that cycle.
-- function savePeriod L505
-- function askCompanyDelete L522
-- function loadHistory L548
-- function shiftWeek L556
-- property historyRows L569
-- function submitEditor L573
-- function cancelEditor L595
-- function askDestroy L600
-- function askDiscard L616: track page or the d key. Nothing is written; the dialog defaults to Cancel.
-- function askDeleteRow L625
-- function runConfirmed L637
-- function openHistoryMonth L653: The month page for the cycle holding the shown week's Monday.
-- function cycleCompany L660: Next active company on the track page (the live session moves with it).
-- function primaryAction L665
-- function formKept L678: (a click outside to copy text from a document) leaves it as typed.
-- property focusNow L686: The field the keyboard was in, given back when a kept form reopens.
-- property lastFocus L687
-- component KeyCap L734: A key as printed on the keyboard, for the keys the panel answers to.
-- component Card L755: A card: the shared fill and padding.
-- component CardHeader L773: Card header: a title on the left, a figure (or the chart readout) right.
-- component ChoiceChip L835: A pill-shaped choice: filled when on (the WireGuard verdict chip look).
-- component CompanyChips L879: A row of company chips; `companies` items carry id, name and archived.
-- component MoneyBlock L902: `live` from Model.cycleLive, `fig` the helper's cycle figures.
-- component Meter L1193: says the bar should be by now.
-- component ActionRow L1223: A two-line action row with its key, as in the other panels.
-- component SessionRow L1297: A session in a list: day, times, duration; summary and tags under it.
-- component Hints L1370
-- property pillLabel L1399
-- property liveCompanyName L1408
+- property editingBase L46: elsewhere since (another monitor's panel, the command line) is refused.
+- property reviewBase L47
+- property formBase L48
+- property confirmAction L49
+- property historyWeek L52: History: one week at a time.
+- property history L53
+- property cursor L54
+- property returnPage L56: Where the editor goes back to after an edit or an add.
+- property monthKey L59: Month page: a cycle key ("this" until loaded) and a company id or "all".
+- property monthCompany L60
+- property monthData L61
+- property monthCursor L62
+- property companiesMode L65: Companies page: list, company (form) or contract (form).
+- property companyCursor L66
+- property formCompanyId L67
+- property formFrom L68
+- property formError L69
+- property formErrorField L70
+- property several L72
+- property monthMeta L74
+- property companiesTitle L87
+- property companiesMeta L89
+- function companyInfo L97
+- property foreground L99
+- property accent L100
+- property urgent L101
+- property dim L102
+- property fontFamily L103
+- property hoverFill L104
+- property reasonText L106
+- property footerKeys L113: button stay beside it (away actions, discard, add on a day).
+- property activityRange L134: Track page: the activity chart shows this week ("week") or 8 weeks ("weeks").
+- property monthChart L136: Month page: hours by day ("days") or by week ("weeks").
+- function go L140
+- function newEntry L164: dateKey: the day the new rows fall on (the month page's day rows).
+- function editSession L175
+- function editLive L186: The running or paused session in the form; once it ended, the review.
+- function openMonth L201
+- property monthRequest L212: so a slow reply never shows another company or cycle than the one picked.
+- function loadMonth L213
+- property monthLimit L236: The cycle the month page cannot go past: the one holding today.
+- function shiftMonth L242
+- property monthFilters L253: company, then archived ones that have sessions in the shown period.
+- function setMonthCompany L267
+- function cycleMonthCompany L279
+- property monthRows L285: Day and session rows, flattened for the keyboard cursor.
+- function billedIn L300: "21 Oct to 20 Nov 2026" when another cycle than the one of its dates bills the session.
+- property monthFigures L306: The figures the package card shows: the one company's, or null for all.
+- property monthOpenSec L307
+- property monthLiveFig L308
+- property monthSeries L310
+- property monthWeekSeries L311
+- property monthGuideHours L312
+- function formKey L315: Field keys on the companies forms: Ctrl+Enter saves, Esc goes back to the list.
+- function ensureVisible L332: Scroll the panel so `item` (a row) is in view.
+- property flashFrom L342: for a moment (`flashFrom` to `flashTo`, date keys).
+- property flashTo L343
+- function dayRowIndex L350
+- function revealDays L355
+- function revealWeek L369
+- function monthActivate L377
+- function askDeleteMonthRow L384
+- property selectedCompanyId L399: Company rows, the selected company's periods under it (newest first).
+- property companyRows L400
+- function companyIndex L412
+- property companyRow L417
+- property selectedCompany L418
+- function selectCompanyRow L420
+- function moveCompanyCursor L432
+- function activateCompanyRow L436
+- function editCompany L443
+- function saveCompany L455
+- function editPeriod L473: A period of `c`; null `period` adds one from the next cycle's first day.
+- property termsBilling L495
+- property termsDraft L496
+- property termsCheck L501
+- property termsCaption L504: A date in the middle of a cycle prorates that cycle.
+- function savePeriod L514
+- function askCompanyDelete L531
+- function loadHistory L557
+- function shiftWeek L565
+- property historyRows L578
+- function submitEditor L582
+- function cancelEditor L604
+- function askDestroy L609
+- function askDiscard L625: track page or the d key. Nothing is written; the dialog defaults to Cancel.
+- function askDeleteRow L634
+- function runConfirmed L646
+- function openHistoryMonth L662: The month page for the cycle holding the shown week's Monday.
+- function cycleCompany L669: Next active company on the track page (the live session moves with it).
+- function primaryAction L674
+- function formKept L689: company changed elsewhere is caught by the save itself.
+- property focusNow L698: The field the keyboard was in, given back when a kept form reopens.
+- property lastFocus L699
+- component KeyCap L746: A key as printed on the keyboard, for the keys the panel answers to.
+- component Card L767: A card: the shared fill and padding.
+- component CardHeader L785: Card header: a title on the left, a figure (or the chart readout) right.
+- component ChoiceChip L847: A pill-shaped choice: filled when on (the WireGuard verdict chip look).
+- component CompanyChips L891: A row of company chips; `companies` items carry id, name and archived.
+- component MoneyBlock L914: `live` from Model.cycleLive, `fig` the helper's cycle figures.
+- component Meter L1205: says the bar should be by now.
+- component ActionRow L1235: A two-line action row with its key, as in the other panels.
+- component SessionRow L1309: A session in a list: day, times, duration; summary and tags under it.
+- component Hints L1382
+- property pillLabel L1411
+- property liveCompanyName L1420
 
-## Service.qml (630 lines)
+## Service.qml (636 lines)
 Worklog service: the one owner of the session state. The shell loads it
 - property shell L32: Injected by omarchy-shell (the service loader).
 - property pluginId L34
@@ -396,34 +399,34 @@ Worklog service: the one owner of the session state. The shell loads it
 - function editActive L230: base: the session's editBase when the form opened; a changed session is refused.
 - function useCompany L236: The current company; with a live session, the session moves to it too.
 - function company L243: use, archive, unarchive, delete (id).
-- function contract L253: action: set (id, from, terms, replace), delete (id, from).
-- function overage L261: Hours over the package in one cycle: action "waive" or "bill".
-- function overageRate L263: The extra hour rate of one cycle alone; an empty rate goes back to the terms' rate.
-- function monthData L270: The month page: key YYYY-MM or "this", company id or "all".
-- function pause L272
-- function resume L280
-- function unpause L289: The away time counts as work: the paused segment runs on.
-- function keepPaused L296
-- function toggle L301
-- function stop L309
-- function back L317
-- function saveDraft L319
-- function confirm L326: billIn: the key of the cycle that bills the session, "" for the cycle of its dates.
-- function discard L336
-- function addSession L341
-- function updateSession L346
-- function deleteSession L351
-- function sessions L354: kind "week" with a key YYYY-Www or "this".
-- function exportPeriod L358: "all", or empty for the default (week: all, month: the current company).
-- function announce L372
-- property autoPaused L376
-- function checkReturn L380: Back at the machine after an automatic pause: ask, once.
-- function remind L408
-- property idleMonitor L459: one is created for each setting value and the old one destroyed.
-- property idleMonitorTimeout L460
-- function armIdle L471
-- function idleChanged L484
-- property dataDir L507: Same lookup as the helper's data_dir().
+- function contract L254: action: set (id, from, terms, replace), delete (id, from).
+- function overage L263: Hours over the package in one cycle: action "waive" or "bill".
+- function overageRate L265: The extra hour rate of one cycle alone; an empty rate goes back to the terms' rate.
+- function monthData L272: The month page: key YYYY-MM or "this", company id or "all".
+- function pause L274
+- function resume L282
+- function unpause L291: The away time counts as work: the paused segment runs on.
+- function keepPaused L298
+- function toggle L303
+- function stop L311
+- function back L319
+- function saveDraft L321
+- function confirm L329: base: the review's reviewBase; a session changed since is refused.
+- function discard L340
+- function addSession L345
+- function updateSession L351: base: the session row's base; a session changed since is refused.
+- function deleteSession L357
+- function sessions L360: kind "week" with a key YYYY-Www or "this".
+- function exportPeriod L364: "all", or empty for the default (week: all, month: the current company).
+- function announce L378
+- property autoPaused L382
+- function checkReturn L386: Back at the machine after an automatic pause: ask, once.
+- function remind L414
+- property idleMonitor L465: one is created for each setting value and the old one destroyed.
+- property idleMonitorTimeout L466
+- function armIdle L477
+- function idleChanged L490
+- property dataDir L513: Same lookup as the helper's data_dir().
 
 ## SessionEditor.qml (704 lines)
 The session form: what was done, tags, the work segments and their totals,
@@ -529,6 +532,14 @@ Model.js: TZ=Europe/Madrid node --test tests
 - function pkg L9
 - function view L16
 
+## tests/panel/run.py (192 lines)
+Panel forms across a close: the real Panel.qml under qs, offscreen, with a
+- const REPO L19
+- const SHELL L20
+- const KEYBOARD_PANEL L24
+- const SHELL_QML L48
+- def main() L134
+
 ## tests/paste/copy.qml (14 lines)
 KeyField's copy and cut (bin/wl-copy records them; WLCOPY_FAIL makes it
 
@@ -578,7 +589,7 @@ Render check for the session form and the chart (run.sh): each case at a
 ## tests/render/run.sh (30 lines)
 Render check of the session form and the chart under Quickshell:
 
-## tests/test_companies.py (767 lines)
+## tests/test_companies.py (785 lines)
 Companies, contract periods and billing cycles (v2):
 - const FIXTURE_TERMS L12
 - const HELPER L15
@@ -586,15 +597,15 @@ Companies, contract periods and billing cycles (v2):
 - def load_module() L19
 - const W L27
 - def seg(start, end) L30
-- class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_of_one_cycle, test_stored_cycle_rates_are_checked, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies, test_half_cent_vat_rounds_up, test_report_keeps_a_fractional_vat_rate, test_resume_cannot_overlap_a_confirmed_session_or_start_later, test_month_lists_a_session_on_every_day_it_has_work, carry, test_session_billed_in_the_next_cycle, test_carried_hours_count_for_the_extra_hours, test_bill_in_is_checked_and_kept_only_when_it_moves_the_session, test_report_of_a_cycle_with_carried_sessions]
+- class Companies L34 [setUp, tearDown, run_cmd, log, add, terms, company, month, figures, test_migration_from_v1, test_newer_version_refused_and_left_alone, test_cycle_bounds, test_terms_in_force_and_uncontracted, test_partial_first_month_under_calendar_cycles, test_mid_cycle_change_prorated, test_fee_change_does_not_alter_past_cycles, test_hourly_company, test_company_scoping, test_cycle_boundaries, test_start_uses_current_company, test_archive_rules, test_last_company_cannot_be_deleted, test_company_validation, test_session_company_edit, test_reports, test_report_split_and_uncontracted, test_extra_hours_billed_or_waived, test_extra_hour_rate_of_one_cycle, test_stored_cycle_rates_are_checked, test_extra_hour_rate_defaults_to_the_standard_rate, test_report_splits_a_session_over_a_terms_change, test_currency_changes_only_on_a_cycle_start, test_migration_counts_a_pending_v1_session, test_unknown_company_in_a_v2_active_file_is_refused, test_stored_numbers_must_be_numbers, test_markdown_report_escapes_the_data, test_money_rounds_half_up_like_the_panel, test_moving_terms_onto_other_terms_is_refused, test_a_report_set_shares_one_name, test_fresh_install_defaults_are_neutral, test_load_validation_companies, test_half_cent_vat_rounds_up, test_report_keeps_a_fractional_vat_rate, test_resume_cannot_overlap_a_confirmed_session_or_start_later, test_month_lists_a_session_on_every_day_it_has_work, carry, test_session_billed_in_the_next_cycle, test_carried_hours_count_for_the_extra_hours, test_bill_in_is_checked_and_kept_only_when_it_moves_the_session, test_report_of_a_cycle_with_carried_sessions, test_stale_company_forms_are_refused]
 
-## tests/test_worklog.py (828 lines)
+## tests/test_worklog.py (873 lines)
 Data layer tests: python3 -m unittest discover -s tests
 - const FIXTURE_TERMS L13
 - const HELPER L15
-- class Helper L18 [setUp, tearDown, run_cmd, log, has_active, active, test_full_cycle, test_commands_in_wrong_state_are_no_ops, test_start_while_paused_resumes, test_idle_pause_back_dated_and_clamped, test_unpause_counts_the_gap_as_work, test_back_from_review, test_confirm_without_args_uses_the_draft, test_discard, test_draft_survives, test_start_with_earlier_segments, test_start_with_closed_last_segment_refused, test_recover_same_boot_fresh_heartbeat, test_recover_stale_heartbeat, test_recover_other_boot, test_recover_keeps_review, test_midnight_split, test_dst_weekend_counts_real_seconds, test_week_figures, test_trend_has_eight_weeks_oldest_first, test_month_and_money, test_money_over_the_package, test_legacy_settings_seed_the_first_company, test_validation, test_overlap_with_other_session_and_running, test_short_segments_dropped_at_confirm, test_empty_session_cannot_be_confirmed, test_confirm_with_edited_segments, test_update_delete_and_sorting, test_sessions_by_week_and_month, test_backup_once_per_day, test_corrupt_log_moved_aside, test_concurrent_writers, test_export_week, test_export_month_spanish_rounded_with_discount, test_confirm_retried_after_a_cut_does_not_duplicate, test_recover_drops_an_already_confirmed_active, test_export_clips_sessions_to_the_period, test_unpause_after_restart_keeps_the_counted_time, test_resume_refreshes_the_heartbeat, test_unpause_refuses_an_overlap, test_malformed_session_answers_in_json_and_keeps_the_file, test_group_writable_data_dir_is_tightened, test_csv_cells_never_start_a_formula, test_interrupted_backup_leaves_no_daily_backup, helper, test_stdin_arguments_stay_off_the_command_line, test_bad_stdin_arguments_are_refused, test_command_line_arguments_still_work, test_refusals_never_echo_a_tag, base, files, test_edit_active_moves_a_running_start_earlier, test_edit_active_keeps_a_paused_session_paused, stale_save, test_stale_form_cannot_undo_a_pause, test_stale_form_cannot_erase_later_work, test_stale_form_cannot_land_on_a_new_session, test_stale_form_refused_after_a_draft_or_company_change, test_a_heartbeat_does_not_make_a_form_stale, test_edit_active_writes_the_draft_with_the_times, test_edit_active_refused_saves_nothing, test_edit_active_keeps_the_shape_of_the_state, test_edit_active_keeps_short_and_empty_segments, test_edit_active_time_ahead_of_now_is_stored_as_now, test_confirm_drops_an_empty_segment, test_a_session_of_empty_segments_stays_refused_at_confirm, test_a_ledger_over_the_bound_is_refused_and_left_alone, test_old_sessions_leave_the_view_figures_alone, test_a_fifo_at_the_ledger_path_is_refused_without_hanging, test_a_dangling_link_at_a_report_name_is_skipped, test_the_answer_is_ascii_whatever_the_text, test_a_save_past_the_bound_is_refused_and_the_session_still_stops, test_a_fifo_at_the_lock_path_is_refused_without_hanging, test_old_sessions_leave_the_month_page_alone]
+- class Helper L18 [setUp, tearDown, run_cmd, log, has_active, active, test_full_cycle, test_commands_in_wrong_state_are_no_ops, test_start_while_paused_resumes, test_idle_pause_back_dated_and_clamped, test_unpause_counts_the_gap_as_work, test_back_from_review, test_confirm_without_args_uses_the_draft, test_discard, test_draft_survives, test_start_with_earlier_segments, test_start_with_closed_last_segment_refused, test_recover_same_boot_fresh_heartbeat, test_recover_stale_heartbeat, test_recover_other_boot, test_recover_keeps_review, test_midnight_split, test_dst_weekend_counts_real_seconds, test_week_figures, test_trend_has_eight_weeks_oldest_first, test_month_and_money, test_money_over_the_package, test_legacy_settings_seed_the_first_company, test_validation, test_overlap_with_other_session_and_running, test_short_segments_dropped_at_confirm, test_empty_session_cannot_be_confirmed, test_confirm_with_edited_segments, test_update_delete_and_sorting, test_sessions_by_week_and_month, test_backup_once_per_day, test_corrupt_log_moved_aside, test_concurrent_writers, test_export_week, test_export_month_spanish_rounded_with_discount, test_confirm_retried_after_a_cut_does_not_duplicate, test_recover_drops_an_already_confirmed_active, test_export_clips_sessions_to_the_period, test_unpause_after_restart_keeps_the_counted_time, test_resume_refreshes_the_heartbeat, test_unpause_refuses_an_overlap, test_malformed_session_answers_in_json_and_keeps_the_file, test_group_writable_data_dir_is_tightened, test_csv_cells_never_start_a_formula, test_interrupted_backup_leaves_no_daily_backup, helper, test_stdin_arguments_stay_off_the_command_line, test_bad_stdin_arguments_are_refused, test_command_line_arguments_still_work, test_refusals_never_echo_a_tag, base, files, test_edit_active_moves_a_running_start_earlier, test_edit_active_keeps_a_paused_session_paused, stale_save, test_stale_form_cannot_undo_a_pause, test_stale_form_cannot_erase_later_work, test_stale_form_cannot_land_on_a_new_session, test_stale_form_refused_after_a_draft_or_company_change, test_stale_review_cannot_drop_later_work, test_stale_review_cannot_confirm_a_new_session, test_review_base_ignores_its_own_draft, test_stale_edit_cannot_overwrite_a_newer_edit, test_a_heartbeat_does_not_make_a_form_stale, test_edit_active_writes_the_draft_with_the_times, test_edit_active_refused_saves_nothing, test_edit_active_keeps_the_shape_of_the_state, test_edit_active_keeps_short_and_empty_segments, test_edit_active_time_ahead_of_now_is_stored_as_now, test_confirm_drops_an_empty_segment, test_a_session_of_empty_segments_stays_refused_at_confirm, test_a_ledger_over_the_bound_is_refused_and_left_alone, test_old_sessions_leave_the_view_figures_alone, test_a_fifo_at_the_ledger_path_is_refused_without_hanging, test_a_dangling_link_at_a_report_name_is_skipped, test_the_answer_is_ascii_whatever_the_text, test_a_save_past_the_bound_is_refused_and_the_session_still_stops, test_a_fifo_at_the_lock_path_is_refused_without_hanging, test_old_sessions_leave_the_month_page_alone]
 
-## worklog.py (2540 lines)
+## worklog.py (2576 lines)
 Worklog data helper: the only writer of the worklog files.
 - const VERSION L47
 - const MIN_SEGMENT_SEC L48
@@ -662,90 +673,95 @@ Worklog data helper: the only writer of the worklog files.
 - def cycle_label(cycle_day, first, last, lang) L809
 - def session_counts(store) L824
 - def company_row(store, c, today, counts) L831
-- def companies_sorted(store) L841
-- def seg_bounds(seg, now) L847
-- def worked_sec(segments, now, closed_only) L853
-- def paused_sec(segments, now) L863
-- def clean_segments(raw, now, allow_open, drop_short) L871: Validate a segment list from the editor. Returns a new sorted list.
-- def clean_summary(text) L916
-- def clean_tags(raw) L925
-- def check_no_overlap(store, segments, now, skip_id, include_active) L944
-- def new_id(now) L959
-- def ledger_limit_bytes() L965
-- def all_segments(store, include_active, now, company, since, billed) L973: Closed segments of the confirmed sessions and, when asked, of the live
-- def sec_between(segments, start, end, now) L994
-- def carried(store, company, key, now) L1002: The seconds a cycle bills from the sessions set to it, whenever they
-- def clean_bill_in(value, company, segments) L1019: The key of the cycle a session is billed in, or "" when it is the
-- def set_bill_in(store, session, value) L1033
-- def week_figures(segments, monday, today, target_sec, now) L1041
-- def days_elapsed(first, last, today) L1059
-- def cycle_figures(company, key, segments, today, now, carry) L1067: One company's cycle: owed hours, pace and the parts its terms cut it
-- def money(fig, worked_sec_value, part_worked) L1139: What the cycle bills for `worked_sec_value` seconds. The seconds the
-- def session_row(s, now) L1208
-- def recent_tags(store) L1228
-- def build_view(store, now) L1239
-- def edit_base(active) L1309: Fingerprint of what the session form shows. A save carrying an older one
-- def need_state(store) L1318
-- def close_open(store, at, reason) L1325
-- def cmd_start(store, args, now) L1334
-- def cmd_pause(store, args, now) L1367
-- def cmd_resume(store, args, now) L1377
-- def cmd_unpause(store, args, now) L1395: Count the pause as work: the last segment runs on as if never closed.
-- def cmd_stop(store, args, now) L1409
-- def cmd_back(store, args, now) L1419
-- def set_draft(active, summary, tags) L1428
-- def cmd_draft(store, args, now) L1436
-- def cmd_edit_active(store, args, now) L1441
-- def session_company(store, args, default) L1471: --company for a confirmed session: any active company, or the one the
-- def cmd_confirm(store, args, now) L1482
-- def cmd_discard(store, args, now) L1510
-- def cmd_heartbeat(store, args, now) L1515
-- def cmd_recover(store, args, now) L1522: Service start: a running session whose heartbeat is stale, or from
-- def cmd_announce(store, args, now) L1545
-- def find_session(store, sid) L1550
-- def cmd_add(store, args, now) L1557
-- def cmd_update(store, args, now) L1577
-- def cmd_delete(store, args, now) L1592
-- def check_name_free(store, name, skip_id) L1599
-- def cmd_company(store, args, now) L1605
-- def check_currency_cuts(company) L1666: A cycle bills in one currency: a period that changes the currency must
-- def cmd_overage(store, args, now) L1676: The hours over the package in one cycle: waive them, bill them again,
-- def cmd_contract(store, args, now) L1707
-- def sessions_in(store, first, last, now, company) L1739
-- def cmd_sessions(store, args, now, cfg) L1752
-- def month_key_arg(value, company, today) L1763
-- def cmd_month(store, args, now) L1770: The month page: one company's cycle, or a calendar month for all.
-- const TEXT L1860
-- def fmt_duration(sec) L1962
-- def fmt_money(value, lang, currency) L1973: 1.600,00 €: Spanish separators in both report languages, as the
-- def fmt_number(value, lang, digits) L1980
-- def fmt_rate(value, lang) L1984: A VAT rate as given: 21, 7,5, 10,25 (no rounding to whole points).
-- def ordinal(n) L1989
-- def day_label(d, t) L1997
-- def short_day(d, t, year) L2001
-- def span_label(a, b, t) L2006
-- def rounded(sec, rounding_min) L2014
-- def slug(name) L2021
-- def export_rows(sessions, now, rounding_min, period_start, period_end, names, carried) L2025: One row per session, its segments clipped to the period, so a session
-- def row_parts(row, parts, now, carried_part) L2057: A row's (rounded) seconds split over the terms parts by where its
-- def csv_text(value) L2073: A cell a spreadsheet shows as text, never runs as a formula.
-- def write_csv(path, rows) L2079
-- def summary_lines(text) L2090: The summary's lines as written, trimmed, blank lines dropped, joined by
-- def terms_text(terms, t, lang) L2096
-- def cycle_text(cycle_day, t) L2105
-- def table_rows(rows, t, with_company) L2111
-- def month_report(company, fig, rows, cfg, now) L2123: The monthly report of one company as plain parts: title, terms lines,
-- def week_report(company, monday, rows, cfg, now, with_company) L2233
-- def md_escape(text) L2255: Plain text in Markdown: no markup, links, images or raw HTML from the
-- def render_markdown(rep) L2261
-- const HTML_PAGE L2286
-- def render_html(rep) L2324
-- def write_report(out_dir, stem, rep, rows, cfg) L2358: The CSV, Markdown and HTML of one report under one free name: a
-- def cmd_export(store, args, now, cfg) L2381
-- const MUTATING L2428
-- const LOG_WRITERS L2435
-- def parser() L2438
-- def run(argv) L2467
-- const MAX_STDIN L2499
-- def stdin_argv() L2502: `worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
-- def main(argv) L2518
+- def companies_sorted(store) L842
+- def seg_bounds(seg, now) L848
+- def worked_sec(segments, now, closed_only) L854
+- def paused_sec(segments, now) L864
+- def clean_segments(raw, now, allow_open, drop_short) L872: Validate a segment list from the editor. Returns a new sorted list.
+- def clean_summary(text) L917
+- def clean_tags(raw) L926
+- def check_no_overlap(store, segments, now, skip_id, include_active) L945
+- def new_id(now) L960
+- def ledger_limit_bytes() L966
+- def all_segments(store, include_active, now, company, since, billed) L974: Closed segments of the confirmed sessions and, when asked, of the live
+- def sec_between(segments, start, end, now) L995
+- def carried(store, company, key, now) L1003: The seconds a cycle bills from the sessions set to it, whenever they
+- def clean_bill_in(value, company, segments) L1020: The key of the cycle a session is billed in, or "" when it is the
+- def set_bill_in(store, session, value) L1034
+- def week_figures(segments, monday, today, target_sec, now) L1042
+- def days_elapsed(first, last, today) L1060
+- def cycle_figures(company, key, segments, today, now, carry) L1068: One company's cycle: owed hours, pace and the parts its terms cut it
+- def money(fig, worked_sec_value, part_worked) L1140: What the cycle bills for `worked_sec_value` seconds. The seconds the
+- def session_row(s, now) L1209
+- def recent_tags(store) L1230
+- def build_view(store, now) L1241
+- def edit_base(active) L1312: Fingerprint of what the session form shows. A save carrying an older one
+- def fingerprint(value) L1321
+- def review_base(active) L1325: Fingerprint of what the review confirms: the session, its times and
+- def session_base(s) L1332: Fingerprint of a saved session as its edit form loaded it.
+- def company_base(c) L1337: Fingerprint of what the company and terms forms show. Waived cycles,
+- def check_base(args, base, what, field) L1343: A form carrying an older fingerprint is refused: the record changed
+- def need_state(store) L1350
+- def close_open(store, at, reason) L1357
+- def cmd_start(store, args, now) L1366
+- def cmd_pause(store, args, now) L1399
+- def cmd_resume(store, args, now) L1409
+- def cmd_unpause(store, args, now) L1427: Count the pause as work: the last segment runs on as if never closed.
+- def cmd_stop(store, args, now) L1441
+- def cmd_back(store, args, now) L1451
+- def set_draft(active, summary, tags) L1460
+- def cmd_draft(store, args, now) L1468
+- def cmd_edit_active(store, args, now) L1473
+- def session_company(store, args, default) L1503: --company for a confirmed session: any active company, or the one the
+- def cmd_confirm(store, args, now) L1514
+- def cmd_discard(store, args, now) L1543
+- def cmd_heartbeat(store, args, now) L1548
+- def cmd_recover(store, args, now) L1555: Service start: a running session whose heartbeat is stale, or from
+- def cmd_announce(store, args, now) L1578
+- def find_session(store, sid) L1583
+- def cmd_add(store, args, now) L1590
+- def cmd_update(store, args, now) L1610
+- def cmd_delete(store, args, now) L1626
+- def check_name_free(store, name, skip_id) L1633
+- def cmd_company(store, args, now) L1639
+- def check_currency_cuts(company) L1701: A cycle bills in one currency: a period that changes the currency must
+- def cmd_overage(store, args, now) L1711: The hours over the package in one cycle: waive them, bill them again,
+- def cmd_contract(store, args, now) L1742
+- def sessions_in(store, first, last, now, company) L1775
+- def cmd_sessions(store, args, now, cfg) L1788
+- def month_key_arg(value, company, today) L1799
+- def cmd_month(store, args, now) L1806: The month page: one company's cycle, or a calendar month for all.
+- const TEXT L1896
+- def fmt_duration(sec) L1998
+- def fmt_money(value, lang, currency) L2009: 1.600,00 €: Spanish separators in both report languages, as the
+- def fmt_number(value, lang, digits) L2016
+- def fmt_rate(value, lang) L2020: A VAT rate as given: 21, 7,5, 10,25 (no rounding to whole points).
+- def ordinal(n) L2025
+- def day_label(d, t) L2033
+- def short_day(d, t, year) L2037
+- def span_label(a, b, t) L2042
+- def rounded(sec, rounding_min) L2050
+- def slug(name) L2057
+- def export_rows(sessions, now, rounding_min, period_start, period_end, names, carried) L2061: One row per session, its segments clipped to the period, so a session
+- def row_parts(row, parts, now, carried_part) L2093: A row's (rounded) seconds split over the terms parts by where its
+- def csv_text(value) L2109: A cell a spreadsheet shows as text, never runs as a formula.
+- def write_csv(path, rows) L2115
+- def summary_lines(text) L2126: The summary's lines as written, trimmed, blank lines dropped, joined by
+- def terms_text(terms, t, lang) L2132
+- def cycle_text(cycle_day, t) L2141
+- def table_rows(rows, t, with_company) L2147
+- def month_report(company, fig, rows, cfg, now) L2159: The monthly report of one company as plain parts: title, terms lines,
+- def week_report(company, monday, rows, cfg, now, with_company) L2269
+- def md_escape(text) L2291: Plain text in Markdown: no markup, links, images or raw HTML from the
+- def render_markdown(rep) L2297
+- const HTML_PAGE L2322
+- def render_html(rep) L2360
+- def write_report(out_dir, stem, rep, rows, cfg) L2394: The CSV, Markdown and HTML of one report under one free name: a
+- def cmd_export(store, args, now, cfg) L2417
+- const MUTATING L2464
+- const LOG_WRITERS L2471
+- def parser() L2474
+- def run(argv) L2503
+- const MAX_STDIN L2535
+- def stdin_argv() L2538: `worklog.py --stdin`: the arguments as a JSON list of strings on stdin.
+- def main(argv) L2554
