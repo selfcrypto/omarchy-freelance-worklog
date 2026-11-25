@@ -27,6 +27,7 @@
 | File | What it is for |
 |---|---|
 | `manifest.json` | Plugin manifest: service + bar widget, defaults, settings schema |
+| `CHANGELOG.md` | Changes per release, newest first; a release adds its entry with the manifest version |
 | `Service.qml` | Owner of state, helper calls (`run`, `handle`), automatic pauses, IPC, toasts |
 | `HelperRunner.qml` | Helper calls one at a time: a process per call, bounded queue (view and heartbeat merge, a draft merges at the end), each call settled once on exit, failed start, deadline or output cap, a stopped process drained before the next |
 | `Panel.qml` | Bar pill and the panel: track, away, review, editor, history, month and companies pages; `MoneyBlock`, `CompanyChips` |

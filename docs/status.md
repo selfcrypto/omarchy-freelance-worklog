@@ -7,13 +7,13 @@ Budget 15 KB.
 
 | Thing | State |
 |---|---|
-| Version | 0.3.12 (`4fc1bcd`) on GitHub `main`, `[Verify]` #15659 open since 2026-11-22, bot checks passed, waiting for a maintainer. 0.3.11 (`e1b8a83`) is the last verified (#13941, approved 2026-11-11) |
+| Version | 0.3.13 on GitHub `main`, `[Verify]` #15659 retargeted to it on 2026-11-25 (opened for 0.3.12 on 2026-11-22). 0.3.11 (`e1b8a83`) is the last verified (#13941, approved 2026-11-11) |
 | Tests | 115 helper (`tests/test_worklog.py`, `tests/test_companies.py`), 42 Model.js, 33 QML (KeyField, TimeField), clipboard (`tests/paste/run.sh`), helper runner (`tests/helper/run.sh`), render check (`tests/render/run.sh`), panel forms (`tests/panel/run.py`), all passing; `omarchy plugin validate` clean |
 | Review | 0.3.8: first-look design pass, gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel, before the code (findings reproduced, built in; see decisions). The code itself is not reviewed. 0.3.6: gpt-6-astra, medium, and a Claude Fable agent, blind and in parallel (4 + 7 findings, all reproduced, 9 fixed with tests; see decisions). Codex gpt-6.1-sol, medium: v1 (13 findings) and v2 (13 findings), all confirmed and fixed with tests (`docs/decisions.md`). Design: gpt-6-astra, medium, 2026-10-28 (2 defects, 8 improvements). 0.3.0: gpt-6.1-sol, medium (8 defects, all reproduced, fixed with tests; see decisions) |
 
 ## Pending
 
-1. 0.3.12 `[Verify]` #15659 open. Nothing goes to GitHub main while it is open; a new release retargets the open issue.
+1. 0.3.13 `[Verify]` #15659 open. Nothing goes to GitHub main while it is open; a new release retargets the open issue.
 2. Not yet checked live: the edit form on the live session (Enter, the pencil, Save, a pause while the form is open), the reminder toast, the light theme, chart clicks with a pointer. `Panel.qml` is tested only for forms across a close.
 3. Paste decodes each `wl-paste` read on its own, so an accented character cut between two reads arrives as two U+FFFD (since 0.3.0, rare: needs a clipboard owner writing in pieces). Fixing it means a byte-level reader; left alone in 0.3.11 to keep the paste path unchanged.
 4. Later: a cycle trend chart, per-week guide overrides, billing the hours over a package in mixed cycles.
