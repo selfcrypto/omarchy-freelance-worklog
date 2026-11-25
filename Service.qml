@@ -246,6 +246,7 @@ Item {
     if (args.name !== undefined) a = a.concat(["--name", String(args.name)])
     if (args.tag !== undefined) a = a.concat(["--tag", String(args.tag)])
     if (args.cycleDay !== undefined) a = a.concat(["--cycle-day", String(args.cycleDay)])
+    if (args.base) a = a.concat(["--base", String(args.base)])
     run(a, done)
   }
 
@@ -254,6 +255,7 @@ Item {
     var a = ["contract", "--action", action, "--id", String(args.id), "--from", String(args.from)]
     if (args.terms) a = a.concat(["--terms", JSON.stringify(args.terms)])
     if (args.replace && args.replace !== args.from) a = a.concat(["--replace", String(args.replace)])
+    if (args.base) a = a.concat(["--base", String(args.base)])
     run(a, done)
   }
 
@@ -323,8 +325,10 @@ Item {
 
   // null summary or tags: the helper uses the saved draft (IPC confirm).
   // billIn: the key of the cycle that bills the session, "" for the cycle of its dates.
-  function confirm(summary, tags, segments, done, company, billIn) {
+  // base: the review's reviewBase; a session changed since is refused.
+  function confirm(summary, tags, segments, done, company, billIn, base) {
     var args = ["confirm"]
+    if (base) args = args.concat(["--base", String(base)])
     if (billIn !== null && billIn !== undefined) args = args.concat(["--bill-in", String(billIn)])
     if (company) args = args.concat(["--company", String(company)])
     if (summary !== null && summary !== undefined) args = args.concat(["--summary", String(summary)])
@@ -343,9 +347,11 @@ Item {
       .concat(company ? ["--company", String(company)] : []).concat(["--bill-in", String(billIn || "")]), done)
   }
 
-  function updateSession(id, segments, summary, tags, done, company, billIn) {
+  // base: the session row's base; a session changed since is refused.
+  function updateSession(id, segments, summary, tags, done, company, billIn, base) {
     run(["update", "--id", String(id), "--segments", JSON.stringify(segments), "--summary", String(summary || ""), "--tags", String(tags || "")]
-      .concat(company ? ["--company", String(company)] : []).concat(["--bill-in", String(billIn || "")]), done)
+      .concat(company ? ["--company", String(company)] : []).concat(["--bill-in", String(billIn || "")])
+      .concat(base ? ["--base", String(base)] : []), done)
   }
 
   function deleteSession(id, done) { run(["delete", "--id", String(id)], done) }

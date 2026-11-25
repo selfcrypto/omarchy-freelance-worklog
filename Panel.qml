@@ -41,6 +41,11 @@ Panel {
   // The live session's editBase when its form opened.
   property string liveBase: ""
   property string editingId: ""
+  // Fingerprints of what a form loaded: a save over a record changed
+  // elsewhere since (another monitor's panel, the command line) is refused.
+  property string editingBase: ""
+  property string reviewBase: ""
+  property string formBase: ""
   property string confirmAction: ""
 
   // History: one week at a time.
@@ -139,6 +144,7 @@ Panel {
     page = target
     if (target === "review") {
       editorMode = "review"
+      reviewBase = view.active.reviewBase || ""
       editor.load(Model.rowsFromSegments(view.active.segments), view.active.draft.summary, view.active.draft.tags, view.active.company || svc.currentCompany)
       Qt.callLater(editor.focusSummary)
       return
@@ -170,6 +176,7 @@ Panel {
     returnPage = page === "month" ? "month" : "history"
     editorMode = "edit"
     editingId = s.id
+    editingBase = s.base || ""
     page = "editor"
     editor.load(Model.rowsFromSegments(s.segments), s.summary, s.tags, s.company || svc.currentCompany, s.billIn)
     Qt.callLater(editor.focusSummary)
@@ -435,6 +442,7 @@ Panel {
 
   function editCompany(c) {
     formCompanyId = c ? c.id : ""
+    formBase = c ? (c.base || "") : ""
     formError = ""
     formErrorField = ""
     companiesMode = "company"
@@ -458,7 +466,7 @@ Panel {
       Qt.callLater(function() { keyCatcher.forceActiveFocus() })
     }
     if (formCompanyId === "") svc.company("add", args, done)
-    else svc.company("rename", Object.assign({ id: formCompanyId }, args), done)
+    else svc.company("rename", Object.assign({ id: formCompanyId, base: formBase }, args), done)
   }
 
   // A period of `c`; null `period` adds one from the next cycle's first day.
@@ -467,6 +475,7 @@ Panel {
     var base = period || c.inForce || c.contracts[c.contracts.length - 1]
     var from = period ? period.from : Model.cycleBounds(c.cycleDay, Model.shiftCycle(Model.cycleOf(c.cycleDay, Model.localDateKey(nowMs)), 1)).first
     formCompanyId = c.id
+    formBase = c.base || ""
     formFrom = period ? period.from : ""
     formError = ""
     formErrorField = ""
@@ -512,7 +521,7 @@ Panel {
       terms.monthlyFee = Number(t.monthlyFee)
       terms.overageRate = Number(t.overageRate)
     }
-    svc.contract("set", { id: formCompanyId, from: t.from, terms: terms, replace: formFrom }, function(r) {
+    svc.contract("set", { id: formCompanyId, from: t.from, terms: terms, replace: formFrom, base: formBase }, function(r) {
       if (!r.ok) { root.formError = r.error; root.formErrorField = r.field.replace("terms.", ""); return }
       root.companiesMode = "list"
       Qt.callLater(function() { keyCatcher.forceActiveFocus() })
@@ -582,8 +591,8 @@ Panel {
       if (root.editorMode === "review" || running) root.go("track")
       else root.go(root.returnPage)
     }
-    if (editorMode === "review") svc.confirm(summary, tags, segments, done, company, editor.billIn)
-    else if (editorMode === "edit") svc.updateSession(editingId, segments, summary, tags, done, company, editor.billIn)
+    if (editorMode === "review") svc.confirm(summary, tags, segments, done, company, editor.billIn, reviewBase)
+    else if (editorMode === "edit") svc.updateSession(editingId, segments, summary, tags, done, company, editor.billIn, editingBase)
     else if (editorMode === "live") svc.editActive(liveBase, segments, summary, tags, view.active && company !== view.active.company ? company : "", done)
     else if (running) svc.startWithSegments(segments, company, function(r) {
       if (r.ok) svc.saveDraft(summary, tags)
@@ -673,11 +682,14 @@ Panel {
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
-  // A form still valid for the session it was opened on. Closing the panel
-  // (a click outside to copy text from a document) leaves it as typed.
+  // A form kept as typed when the panel opens again (closed by a click
+  // outside to copy text from a document). The review and the live form
+  // only while their session is the one they loaded; a saved session or a
+  // company changed elsewhere is caught by the save itself.
   function formKept() {
-    if (page === "review") return sessionState === "ending"
-    if (page === "editor") return editorMode !== "live" || editor.liveState === sessionState
+    var a = view ? view.active : null
+    if (page === "review") return sessionState === "ending" && !!a && a.reviewBase === reviewBase
+    if (page === "editor") return editorMode !== "live" || (!!a && a.editBase === liveBase)
     if (page === "companies") return companiesMode !== "list"
     return false
   }
