@@ -673,11 +673,37 @@ Panel {
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
+  // A form still valid for the session it was opened on. Closing the panel
+  // (a click outside to copy text from a document) leaves it as typed.
+  function formKept() {
+    if (page === "review") return sessionState === "ending"
+    if (page === "editor") return editorMode !== "live" || editor.liveState === sessionState
+    if (page === "companies") return companiesMode !== "list"
+    return false
+  }
+
+  // The field the keyboard was in, given back when a kept form reopens.
+  readonly property Item focusNow: keyCatcher.Window.activeFocusItem
+  property Item lastFocus: null
+  onFocusNowChanged: if (opened && focusNow) lastFocus = focusNow
+  Timer {
+    id: refocusTimer
+    // After the panel's own focus prime lands on the key catcher.
+    interval: 120
+    property Item target: null
+    onTriggered: if (root.opened && target && target.visible) target.forceActiveFocus()
+  }
+
   onOpenedChanged: {
     if (!opened) { dialog.opened = false; return }
     if (!ready) return
     var wanted = svc.requestedPage
     svc.requestedPage = ""
+    if (wanted === "" && !svc.prompt && formKept()) {
+      refocusTimer.target = lastFocus
+      refocusTimer.restart()
+      return
+    }
     if (wanted === "") wanted = svc.prompt ? "away" : (sessionState === "ending" ? "review" : "track")
     historyWeek = "this"
     go(wanted)
