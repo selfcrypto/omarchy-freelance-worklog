@@ -7,13 +7,13 @@ Newest first. Dates are release dates.
 - A session can be billed in another cycle: "Bill in a different cycle" in the session form shows the cycle before, its own and the next. Its hours count in that cycle's package or extra hours; days, weeks and charts keep the true dates. The month page marks these sessions and lists the carried ones first; reports keep the true date and say how many hours are carried
 - A form left open (add or edit a session, the review, the running session, a company, terms) is still there as typed when the panel opens again, with the keyboard in the field it was in
 - A save over a session, review or company changed elsewhere since the form loaded (another monitor's panel, the command line) is refused and nothing is written. IPC `target` is covered too
-- A cycle can bill its extra hours at its own rate (Rate on the month page), the terms unchanged
-- Report totals are a table: Package and Extra hours with hours, rate, value at the standard rate, discount and amount before VAT, then Subtotal, VAT and Total
-- Reports keep a summary's line breaks
 
 ## 0.3.12 · 2026-11-22
 
 - The run switch has an accent track when on (`AccentSwitch.qml`)
+- A cycle can bill its extra hours at its own rate (Rate on the month page), the terms unchanged
+- Report totals are a table: Package and Extra hours with hours, rate, value at the standard rate, discount and amount before VAT, then Subtotal, VAT and Total
+- Reports keep a summary's line breaks
 
 ## 0.3.11 · 2026-11-11
 
