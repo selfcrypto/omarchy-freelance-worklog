@@ -335,7 +335,7 @@ Worklog: a bar pill (the running clock) with a panel of seven pages.
 - property pillLabel L1411
 - property liveCompanyName L1420
 
-## Service.qml (636 lines)
+## Service.qml (639 lines)
 Worklog service: the one owner of the session state. The shell loads it
 - property shell L32: Injected by omarchy-shell (the service loader).
 - property pluginId L34
@@ -532,13 +532,13 @@ Model.js: TZ=Europe/Madrid node --test tests
 - function pkg L9
 - function view L16
 
-## tests/panel/run.py (192 lines)
+## tests/panel/run.py (196 lines)
 Panel forms across a close: the real Panel.qml under qs, offscreen, with a
-- const REPO L19
-- const SHELL L20
-- const KEYBOARD_PANEL L24
-- const SHELL_QML L48
-- def main() L134
+- const REPO L20
+- const SHELL L21
+- const KEYBOARD_PANEL L25
+- const SHELL_QML L49
+- def main() L135
 
 ## tests/paste/copy.qml (14 lines)
 KeyField's copy and cut (bin/wl-copy records them; WLCOPY_FAIL makes it

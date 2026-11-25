@@ -615,7 +615,10 @@ Item {
       if (!c || !c.inForce) return "no terms in force today"
       var terms = Object.assign({}, c.inForce, { weeklyGuideHours: n })
       delete terms.from
-      root.contract("set", { id: c.id, from: c.inForce.from, terms: terms }, null)
+      // base: terms changed since the view was read are refused, not overwritten.
+      root.contract("set", { id: c.id, from: c.inForce.from, terms: terms, base: c.base }, function(r) {
+        if (!r.ok) root.notify("Worklog: weekly guide not set", r.error)
+      })
       return "ok"
     }
     function exportWeek(): string { root.exportPeriod("week", "this", "", null); return "ok" }

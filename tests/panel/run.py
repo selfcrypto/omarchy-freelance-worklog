@@ -3,7 +3,7 @@ fake shared service fed views from the real helper on scratch data.
 python3 tests/panel/run.py
 
 Checks:
-- a new-session form is still there after a close, the keyboard back in its field
+- a new-session form is still there after a close, the keyboard back in the field it was in
 - a review whose session moved on while closed (another panel resumed and
   ended it) opens fresh with the session's real times and sends its reviewBase
 - a session edit kept across a close sends the base it loaded, so the helper
@@ -14,6 +14,7 @@ import os
 import pathlib
 import shutil
 import subprocess
+import sys
 import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -104,11 +105,11 @@ ShellRoot {
     onTriggered: {
       step++
       if (step === 1) { panel.open(); panel.newEntry("2026-11-24") }
-      if (step === 2) { panel.probeEditor.setRow(0, "from", 500); panel.close() }
+      if (step === 2) { panel.probeEditor.setRow(0, "from", 500); panel.probeEditor.probeTags.forceActiveFocus(); panel.close() }
       if (step === 3) { panel.open() }
       if (step === 4) {
         console.log("PROBE new", panel.page, panel.editorMode, "from", panel.probeEditor.rowsArray()[0].from,
-          "focus", panel.focusNow !== null && panel.focusNow !== panel.probeCatcher)
+          "focus", panel.focusNow === panel.probeEditor.probeTags)
         panel.close(); svc.view = test.views.stopped; svc.requestedPage = "review"; panel.open()
       }
       if (step === 5) { panel.close(); svc.view = test.views.ended }
@@ -140,7 +141,7 @@ def main():
 
         def helper(at, *args):
             env["WORKLOG_NOW"] = "2026-11-25T" + at + ":00Z"
-            out = subprocess.run([shutil.which("python3"), "-I", str(REPO / "worklog.py"), "--stdin"],
+            out = subprocess.run([sys.executable, "-I", str(REPO / "worklog.py"), "--stdin"],
                                  input=json.dumps(list(args)), env=env, capture_output=True, text=True, check=True)
             r = json.loads(out.stdout)
             assert r["ok"], r
@@ -169,6 +170,9 @@ def main():
             "  id: root\n", "  id: root\n  property alias probeEditor: editor\n  property alias probeCatcher: keyCatcher\n", 1)
         (p / "WorklogPanel.qml").write_text(panel)
         (p / "Panel.qml").unlink()
+        editor = (p / "SessionEditor.qml").read_text()
+        i = editor.index("  property string mode:")
+        (p / "SessionEditor.qml").write_text(editor[:i] + "  property alias probeTags: tagsField\n" + editor[i:])
         (p / "shell.qml").write_text(SHELL_QML.replace("__VIEWS__", json.dumps(views)))
 
         r = subprocess.run(["timeout", "15", "qs", "-p", str(p), "--no-color"], env=env,
