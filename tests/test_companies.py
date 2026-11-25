@@ -762,6 +762,24 @@ class Companies(unittest.TestCase):
         self.assertIn("2h trabajadas en estas fechas se facturan en otro ciclo.", md)
         self.assertIn("Sin sesiones en este periodo.", md)
 
+    def test_stale_company_forms_are_refused(self):
+        cid = self.company("Acme", cycle_day=21)
+        row = [c for c in self.run_cmd("view")["view"]["companies"] if c["id"] == cid][0]
+        # Waiving a cycle or its own rate does not touch what the forms show.
+        self.run_cmd("overage", "--action", "waive", "--id", cid, "--month", "2026-10")
+        self.run_cmd("company", "--action", "rename", "--id", cid, "--base", row["base"], "--name", "Acme Two")
+        renamed = [c for c in self.run_cmd("view")["view"]["companies"] if c["id"] == cid][0]
+        self.assertNotEqual(renamed["base"], row["base"])
+        r = self.run_cmd("company", "--action", "rename", "--id", cid, "--base", row["base"], "--name", "Acme", ok=False)
+        self.assertEqual(r["field"], "name")
+        args = ["contract", "--action", "set", "--id", cid, "--from", "2026-11-21", "--base", row["base"],
+                "--terms", json.dumps({"billing": "hourly", "standardRate": 40})]
+        r = self.run_cmd(*args, ok=False)
+        self.assertEqual(r["field"], "from")
+        self.assertEqual([c for c in self.log()["companies"] if c["id"] == cid][0]["name"], "Acme Two")
+        args[args.index("--base") + 1] = renamed["base"]
+        self.run_cmd(*args)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -835,6 +835,7 @@ def company_row(store, c, today, counts=None):
         "id": c["id"], "name": c["name"], "tag": c["tag"], "archived": bool(c.get("archived")),
         "cycleDay": c["cycleDay"], "contracts": c["contracts"], "inForce": terms_on(c, today),
         "sessionCount": counts.get(c["id"], 0),
+        "base": company_base(c),
     }
 
 
@@ -1222,6 +1223,7 @@ def session_row(s, now):
         "tags": s.get("tags", []),
         "source": s.get("source", "timer"),
         "billIn": s.get("billIn", ""),
+        "base": session_base(s),
     }
 
 
@@ -1270,6 +1272,7 @@ def build_view(store, now):
         active = {
             "id": a["session"]["id"],
             "editBase": edit_base(a),
+            "reviewBase": review_base(a),
             "company": a["session"].get("company", cid),
             "segments": segments,
             "draft": a.get("draft", {"summary": "", "tags": []}),
@@ -1312,7 +1315,36 @@ def edit_base(active):
     the announced flag stay out, so they never block a save."""
     s = active["session"]
     shown = [s["id"], active["state"], s.get("company"), s["segments"], active.get("draft")]
-    return hashlib.sha256(json.dumps(shown, sort_keys=True).encode("utf-8")).hexdigest()
+    return fingerprint(shown)
+
+
+def fingerprint(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def review_base(active):
+    """Fingerprint of what the review confirms: the session, its times and
+    company. The draft stays out, since the review saves it as it is typed."""
+    s = active["session"]
+    return fingerprint([s["id"], active["state"], s.get("company"), s["segments"]])
+
+
+def session_base(s):
+    """Fingerprint of a saved session as its edit form loaded it."""
+    return fingerprint(s)
+
+
+def company_base(c):
+    """Fingerprint of what the company and terms forms show. Waived cycles,
+    cycle rates and the archived flag stay out: other pages change them."""
+    return fingerprint([c["id"], c["name"], c["tag"], c["cycleDay"], c["contracts"]])
+
+
+def check_base(args, base, what, field):
+    """A form carrying an older fingerprint is refused: the record changed
+    elsewhere (another panel, the command line) while the form was open."""
+    if args.base is not None and args.base != base:
+        raise Refusal("The %s changed elsewhere. Open it again." % what, field)
 
 
 def need_state(store, *states):
@@ -1481,6 +1513,7 @@ def session_company(store, args, default):
 
 def cmd_confirm(store, args, now):
     need_state(store, "ending")
+    check_base(args, review_base(store.active), "session", "segments")
     # A confirm cut between writing the log and removing active.json left
     # the session in both: finish the removal, never append it twice.
     if any(s["id"] == store.active["session"]["id"] for s in store.log["sessions"]):
@@ -1576,6 +1609,7 @@ def cmd_add(store, args, now):
 
 def cmd_update(store, args, now):
     s = find_session(store, args.id)
+    check_base(args, session_base(s), "session", "segments")
     segments = clean_segments(args.segments, now) if args.segments else s["segments"]
     summary = clean_summary(args.summary) if args.summary is not None else s["summary"]
     tags = clean_tags(args.tags) if args.tags is not None else s["tags"]
@@ -1623,6 +1657,7 @@ def cmd_company(store, args, now):
         return
     company = company_by_id(store, args.id)
     if action == "rename":
+        check_base(args, company_base(company), "company", "name")
         if args.name is not None:
             company["name"] = clean_name(args.name)
             check_name_free(store, company["name"], company["id"])
@@ -1708,6 +1743,7 @@ def cmd_contract(store, args, now):
     company = company_by_id(store, args.id)
     start = parse_day(args.from_, "from").isoformat()
     contracts = company["contracts"]
+    check_base(args, company_base(company), "company", "from")
     if args.action == "set":
         terms = clean_terms(args.terms)
         # --replace moves a period: the one from that date leaves, this one comes in.

@@ -636,6 +636,51 @@ class Helper(unittest.TestCase):
         self.run_cmd("edit-active", "--company", other_id, now="2026-10-27T09:04:00Z")
         self.stale_save(base, segments, "2026-10-27T09:05:00Z")
 
+    def test_stale_review_cannot_drop_later_work(self):
+        # A review kept in a closed panel; elsewhere the session resumed and
+        # ended again. Its one segment would erase the second hour.
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        old = self.run_cmd("stop", now="2026-10-27T10:00:00Z")["view"]["active"]
+        self.run_cmd("back", now="2026-10-27T10:01:00Z")
+        self.run_cmd("resume", now="2026-10-27T11:00:00Z")
+        self.run_cmd("stop", now="2026-10-27T12:00:00Z")
+        before = self.files()
+        r = self.run_cmd("confirm", "--base", old["reviewBase"], "--segments", json.dumps(old["segments"]),
+                         "--summary", "old", now="2026-10-27T12:01:00Z", ok=False)
+        self.assertEqual(r["field"], "segments")
+        self.assertEqual(self.files(), before)
+
+    def test_stale_review_cannot_confirm_a_new_session(self):
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        old = self.run_cmd("stop", now="2026-10-27T10:00:00Z")["view"]["active"]
+        self.run_cmd("confirm", "--summary", "first", now="2026-10-27T10:01:00Z")
+        self.run_cmd("start", now="2026-10-27T11:00:00Z")
+        self.run_cmd("stop", now="2026-10-27T12:00:00Z")
+        self.run_cmd("confirm", "--base", old["reviewBase"], "--segments", json.dumps(old["segments"]),
+                     now="2026-10-27T12:01:00Z", ok=False)
+        self.assertTrue(self.has_active())
+
+    def test_review_base_ignores_its_own_draft(self):
+        self.run_cmd("start", now="2026-10-27T09:00:00Z")
+        v = self.run_cmd("stop", now="2026-10-27T10:00:00Z")["view"]["active"]
+        self.run_cmd("draft", "--summary", "typed in the review", now="2026-10-27T10:01:00Z")
+        self.run_cmd("confirm", "--base", v["reviewBase"], "--segments", json.dumps(v["segments"]),
+                     "--summary", "typed in the review", now="2026-10-27T10:02:00Z")
+        self.assertEqual(self.log()["sessions"][0]["summary"], "typed in the review")
+
+    def test_stale_edit_cannot_overwrite_a_newer_edit(self):
+        segs = [{"start": "2026-10-27T08:00:00Z", "end": "2026-10-27T09:00:00Z"}]
+        row = self.run_cmd("add", "--segments", json.dumps(segs), "--summary", "first")["view"]["recent"][0]
+        self.run_cmd("update", "--id", row["id"], "--base", row["base"], "--summary", "corrected elsewhere")
+        before = self.files()
+        r = self.run_cmd("update", "--id", row["id"], "--base", row["base"], "--summary", "first", "--tags", "x",
+                         "--segments", json.dumps(segs), ok=False)
+        self.assertEqual(r["field"], "segments")
+        self.assertEqual(self.files(), before)
+        fresh = self.run_cmd("view")["view"]["recent"][0]
+        self.run_cmd("update", "--id", row["id"], "--base", fresh["base"], "--tags", "x")
+        self.assertEqual(self.log()["sessions"][0]["summary"], "corrected elsewhere")
+
     def test_a_heartbeat_does_not_make_a_form_stale(self):
         self.run_cmd("start", "--boot-id", "b1", now="2026-10-27T09:00:00Z")
         base = self.base("2026-10-27T09:00:00Z")
