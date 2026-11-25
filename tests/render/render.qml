@@ -156,7 +156,10 @@ ShellRoot {
     chart.accent = pal.accent
     editor.mode = c.mode
     editor.liveState = c.mode === "live" ? "running" : ""
-    editor.load(Model.rowsFromSegments(c.mode === "live" ? root.liveSegments : root.segments), root.summary, ["support", "a-very-long-tag-name"], "c_0001")
+    editor.load(Model.rowsFromSegments(c.mode === "live" ? root.liveSegments : root.segments), root.summary, ["support", "a-very-long-tag-name"], "c_0001",
+      c.mode === "live" ? "" : "2026-11")
+    // A saved session billed in another cycle: the switch on, its chips shown.
+    if (c.mode !== "live") expect(editor.billOther, "billOther off with a billIn")
     settle.restart()
   }
 

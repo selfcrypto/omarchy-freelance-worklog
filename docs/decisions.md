@@ -295,3 +295,8 @@ Also, from the same pass: `edit-active` keeps segments under a minute and empty 
 **Decision.** IPC `target` (the weekly guide of the terms in force) sends the cached company's `base` with its terms write, and a refusal is a toast with the helper's error, which names no company.
 **Why.** Codex gpt-6-astra, medium, second pass on the stale-form fix: `target` rewrites the whole period from the panel's cached view, so terms changed by another writer just before were put back (a rate of 90 back to 50, reproduced). Confirmed against the code; older than the fix.
 **Alternative rejected.** A helper action that changes only the weekly guide: more surface for a command that is rarely used, and the fingerprint already covers it.
+
+## 2026-11-25 · Cycle chips behind a switch
+**Decision.** The session form shows "Bill in a different cycle" with an `AccentSwitch`; the cycle chips (the one before, its own, the next) appear only when it is on. It starts on when the session already has a `billIn`. Turning it off clears `billIn`, so the session is billed in the cycle of its dates.
+**Why.** Kike, 2026-11-25: the three chips were always on the form for a choice that is rarely made.
+**Alternative rejected.** Chips always shown (the 2026-11-24 design).

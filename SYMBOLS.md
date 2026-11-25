@@ -428,7 +428,7 @@ Worklog service: the one owner of the session state. The shell loads it
 - function idleChanged L490
 - property dataDir L513: Same lookup as the helper's data_dir().
 
-## SessionEditor.qml (704 lines)
+## SessionEditor.qml (733 lines)
 The session form: what was done, tags, the work segments and their totals,
 - property mode L24
 - property foreground L25
@@ -445,40 +445,41 @@ The session form: what was done, tags, the work segments and their totals,
 - property company L40
 - property companyChoices L41
 - property billIn L43: The cycle that bills the session; "" is the cycle of its dates.
-- property cycleDay L44
-- property showBillIn L48
-- property billChoices L49
-- property showCompanies L50
-- property dim L53
-- property hoverFill L54
-- property canRunOn L56: Only with no session live: the running segment becomes the timer.
-- property liveState L58: The state a live session was in when the form opened ("running", "paused").
-- property mustRunOn L59
-- property allowOpen L60
-- property revision L62
-- property check L63
-- property runsOn L64
-- property summaryText L65
-- property tagsText L66
-- signal submitted L68
-- signal cancelled L69
-- signal destroyRequested L70
-- signal draftEdited L71
-- signal escapePressed L72
-- function rowsArray L76
-- function load L85
-- function loadNew L102: 09:00 to 10:00 on that day.
-- function focusSummary L115: Delayed: the panel's own focus prime lands on its key catcher first.
-- function setRow L122
-- function addRow L128
-- function removeRow L147
-- function shiftDate L153
-- function minutesNow L159
-- function submit L165
-- function addTag L174
-- function fieldKey L183: form, Tab walks the fields (plain Tab would otherwise reach the panel).
-- component Caption L199
-- component Chip L206
+- property billOther L45: The switch that shows the cycle chips; off bills the session in the cycle of its dates.
+- property cycleDay L46
+- property showBillIn L50
+- property billChoices L51
+- property showCompanies L52
+- property dim L55
+- property hoverFill L56
+- property canRunOn L58: Only with no session live: the running segment becomes the timer.
+- property liveState L60: The state a live session was in when the form opened ("running", "paused").
+- property mustRunOn L61
+- property allowOpen L62
+- property revision L64
+- property check L65
+- property runsOn L66
+- property summaryText L67
+- property tagsText L68
+- signal submitted L70
+- signal cancelled L71
+- signal destroyRequested L72
+- signal draftEdited L73
+- signal escapePressed L74
+- function rowsArray L78
+- function load L87
+- function loadNew L105: 09:00 to 10:00 on that day.
+- function focusSummary L118: Delayed: the panel's own focus prime lands on its key catcher first.
+- function setRow L125
+- function addRow L131
+- function removeRow L150
+- function shiftDate L156
+- function minutesNow L162
+- function submit L168
+- function addTag L177
+- function fieldKey L186: form, Tab walks the fields (plain Tab would otherwise reach the panel).
+- component Caption L202
+- component Chip L209
 
 ## TimeField.qml (55 lines)
 An HH:MM field for the session editor, on KeyField (no editable Qt text
@@ -567,7 +568,7 @@ KeyField: typing without an editable Qt text control. Run:
 ## tests/qml/tst_timefield.qml (133 lines)
 TimeField keeps what is typed (review 2026-10-27). Run:
 
-## tests/render/render.qml (186 lines)
+## tests/render/render.qml (189 lines)
 Render check for the session form and the chart (run.sh): each case at a
 - property outDir L13
 - property palettes L14

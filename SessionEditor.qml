@@ -41,6 +41,8 @@ Item {
   readonly property var companyChoices: companies.filter(function(c) { return !c.archived || c.id === editor.company })
   // The cycle that bills the session; "" is the cycle of its dates.
   property string billIn: ""
+  // The switch that shows the cycle chips; off bills the session in the cycle of its dates.
+  property bool billOther: false
   readonly property int cycleDay: {
     for (var i = 0; i < companies.length; i++) if (companies[i].id === company) return companies[i].cycleDay
     return 1
@@ -85,6 +87,7 @@ Item {
   function load(rows, summary, tags, companyId, billed) {
     if (companyId !== undefined) company = companyId
     billIn = billed || ""
+    billOther = billIn !== ""
     rowModel.clear()
     for (var i = 0; i < rows.length; i++)
       rowModel.append({ date: rows[i].date, from: rows[i].from, to: rows[i].to, open: !!rows[i].open, endReason: rows[i].endReason || "",
@@ -315,12 +318,38 @@ Item {
         }
 
         Item { width: 1; height: Style.space(2); visible: editor.showBillIn }
-        Caption { text: "Billed in"; visible: editor.showBillIn }
+
+        Item {
+          width: parent.width
+          height: billSwitch.implicitHeight
+          visible: editor.showBillIn
+
+          Caption {
+            anchors.left: parent.left
+            anchors.right: billSwitch.left
+            anchors.verticalCenter: parent.verticalCenter
+            text: "Bill in a different cycle"
+            elide: Text.ElideRight
+          }
+
+          AccentSwitch {
+            id: billSwitch
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            checked: editor.billOther
+            foreground: editor.foreground
+            accent: editor.accent
+            onToggled: {
+              editor.billOther = !editor.billOther
+              if (!editor.billOther) editor.billIn = ""
+            }
+          }
+        }
 
         Flow {
           width: parent.width
           spacing: Style.space(6)
-          visible: editor.showBillIn
+          visible: editor.showBillIn && editor.billOther
 
           Repeater {
             model: editor.billChoices

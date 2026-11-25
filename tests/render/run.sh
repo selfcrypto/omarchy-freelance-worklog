@@ -11,7 +11,7 @@ trap 'rm -rf -- "$scratch"' EXIT
 mkdir -p "$scratch/root" && mkdir -m 700 "$scratch/runtime"
 ln -s "$shell/Commons" "$scratch/root/Commons"
 ln -s "$shell/Ui" "$scratch/root/Ui"
-cp "$repo"/{SessionEditor,KeyField,TimeField,WeekChart}.qml "$repo/Model.js" "$scratch/root/"
+cp "$repo"/{SessionEditor,KeyField,TimeField,WeekChart,AccentSwitch}.qml "$repo/Model.js" "$scratch/root/"
 cp "$here/render.qml" "$scratch/root/shell.qml"
 out=${1:-$scratch/png}
 mkdir -p "$out"
